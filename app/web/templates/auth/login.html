@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Luro{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1>Login to Luro</h1>
+        <p>Enter your email to receive a magic login link</p>
+        
+        <form method="post" action="/login" class="auth-form">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required class="form-control" placeholder="your@email.com">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Send Magic Link</button>
+        </form>
+        
+        <p class="auth-note">
+            We'll send you a secure login link via email. No password needed!
+        </p>
+    </div>
+</div>
+{% endblock %}

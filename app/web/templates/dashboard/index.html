@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Luro{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ user.name or user.email }}!</h1>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Total Balance</h3>
+            <p class="stat-value">${{ "%.2f"|format(total_balance) }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Accounts</h3>
+            <p class="stat-value">{{ accounts|length }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Active Goals</h3>
+            <p class="stat-value">{{ goals|length }}</p>
+        </div>
+    </div>
+    
+    <div class="dashboard-section">
+        <h2>Recent Transactions</h2>
+        {% if transactions %}
+        <div class="transactions-list">
+            {% for transaction in transactions %}
+            <div class="transaction-item">
+                <div class="transaction-info">
+                    <span class="transaction-description">{{ transaction.description or transaction.category or 'Transaction' }}</span>
+                    <span class="transaction-date">{{ transaction.transaction_date.strftime('%Y-%m-%d') }}</span>
+                </div>
+                <span class="transaction-amount {% if transaction.transaction_type == 'income' %}positive{% else %}negative{% endif %}">
+                    {% if transaction.transaction_type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="/transactions" class="btn btn-secondary">View All Transactions</a>
+        {% else %}
+        <p>No transactions yet. <a href="/transactions">Add your first transaction</a></p>
+        {% endif %}
+    </div>
+    
+    <div class="dashboard-section">
+        <h2>Financial Goals</h2>
+        {% if goals %}
+        <div class="goals-list">
+            {% for goal in goals %}
+            <div class="goal-item">
+                <div class="goal-info">
+                    <h4>{{ goal.name }}</h4>
+                    <div class="goal-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ (goal.current_amount / goal.target_amount * 100)|round }}%"></div>
+                        </div>
+                        <span class="progress-text">
+                            ${{ "%.2f"|format(goal.current_amount) }} / ${{ "%.2f"|format(goal.target_amount) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="/goals" class="btn btn-secondary">View All Goals</a>
+        {% else %}
+        <p>No goals yet. <a href="/goals">Create your first goal</a></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
