@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./luro.db:/app/luro.db
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./luro.db
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-noreply@example.com}
+      - DEBUG=True
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

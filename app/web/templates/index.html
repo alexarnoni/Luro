@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Luro - Personal Finance Manager{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to Luro</h1>
+    <p class="subtitle">Your personal finance management solution</p>
+    <p>Track your accounts, manage transactions, and achieve your financial goals.</p>
+    <div class="cta-buttons">
+        <a href="/login" class="btn btn-primary">Get Started</a>
+    </div>
+</div>
+
+<div class="features">
+    <h2>Features</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>💰 Account Management</h3>
+            <p>Track multiple accounts and monitor your balances in real-time.</p>
+        </div>
+        <div class="feature-card">
+            <h3>📊 Transaction Tracking</h3>
+            <p>Record and categorize all your income and expenses manually.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🎯 Financial Goals</h3>
+            <p>Set and track progress towards your financial objectives.</p>
+        </div>
+        <div class="feature-card">
+            <h3>📈 Insights</h3>
+            <p>Get personalized insights about your spending and saving habits.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

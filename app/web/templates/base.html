@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Luro - Personal Finance Manager{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">Luro</a>
+            {% if user %}
+            <ul class="nav-links">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/accounts">Accounts</a></li>
+                <li><a href="/transactions">Transactions</a></li>
+                <li><a href="/goals">Goals</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+            {% else %}
+            <ul class="nav-links">
+                <li><a href="/login">Login</a></li>
+            </ul>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Luro. Personal Finance Management.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

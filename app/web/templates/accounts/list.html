@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts - Luro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Accounts</h1>
+    <button onclick="toggleForm()" class="btn btn-primary">+ Add Account</button>
+</div>
+
+<div id="account-form" class="form-card" style="display: none;">
+    <h2>Add New Account</h2>
+    <form method="post" action="/accounts">
+        <div class="form-group">
+            <label for="name">Account Name</label>
+            <input type="text" id="name" name="name" required class="form-control" placeholder="e.g., Main Checking">
+        </div>
+        
+        <div class="form-group">
+            <label for="account_type">Account Type</label>
+            <select id="account_type" name="account_type" required class="form-control">
+                <option value="checking">Checking</option>
+                <option value="savings">Savings</option>
+                <option value="credit">Credit Card</option>
+                <option value="investment">Investment</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="balance">Initial Balance</label>
+            <input type="number" id="balance" name="balance" step="0.01" value="0" class="form-control">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Account</button>
+            <button type="button" onclick="toggleForm()" class="btn btn-secondary">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<div class="accounts-grid">
+    {% if accounts %}
+        {% for account in accounts %}
+        <div class="account-card">
+            <h3>{{ account.name }}</h3>
+            <p class="account-type">{{ account.account_type|title }}</p>
+            <p class="account-balance">${{ "%.2f"|format(account.balance) }}</p>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No accounts yet. Create your first account to get started!</p>
+    {% endif %}
+</div>
+
+<script>
+function toggleForm() {
+    const form = document.getElementById('account-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}
