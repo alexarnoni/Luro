@@ -10,6 +10,8 @@ from app.core.database import Base
 from app.domain.users.models import User
 from app.domain.accounts.models import Account
 from app.domain.transactions.models import Transaction
+from app.domain.categories.models import Category
+from app.domain.rules.models import Rule
 from app.domain.goals.models import Goal
 from app.domain.insights.models import Insight
 
