@@ -7,10 +7,12 @@ from app.core.config import settings
 from app.core.csrf import csrf_manager
 from app.core.session import get_session_identifier
 from app.web.routes import api_categories
+from app.web.routes import api_summary
 
 router = APIRouter()
 
 router.include_router(api_categories.router, prefix="/categories", tags=["categories"])
+router.include_router(api_summary.router, tags=["summary"])
 
 
 @router.get("/csrf-token")
