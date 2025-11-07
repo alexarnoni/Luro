@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # Security
     RATE_LIMIT_MAX: int = 5
     RATE_LIMIT_WINDOW_SECONDS: int = 15 * 60
+    IMPORT_MAX_FILE_MB: int = 5
     
     class Config:
         env_file = ".env"
