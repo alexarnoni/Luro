@@ -3,70 +3,55 @@
 {% block title %}Dashboard - Luro{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h1>Welcome, {{ user.name or user.email }}!</h1>
-    
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <h3>Total Balance</h3>
-            <p class="stat-value">${{ "%.2f"|format(total_balance) }}</p>
+<div class="dashboard" data-dashboard>
+    <div class="dashboard-header">
+        <div>
+            <h1>Olá, {{ user.name or user.email }}!</h1>
+            <p class="dashboard-subtitle">Acompanhe suas finanças e visualize tendências dos últimos meses.</p>
         </div>
-        <div class="stat-card">
-            <h3>Accounts</h3>
-            <p class="stat-value">{{ accounts|length }}</p>
-        </div>
-        <div class="stat-card">
-            <h3>Active Goals</h3>
-            <p class="stat-value">{{ goals|length }}</p>
+        <div class="dashboard-filters">
+            <label for="filtro-mes">Mês de referência</label>
+            <input type="month" id="filtro-mes" name="filtro-mes" class="form-control" />
         </div>
     </div>
-    
-    <div class="dashboard-section">
-        <h2>Recent Transactions</h2>
-        {% if transactions %}
-        <div class="transactions-list">
-            {% for transaction in transactions %}
-            <div class="transaction-item">
-                <div class="transaction-info">
-                    <span class="transaction-description">{{ transaction.description or transaction.category or 'Transaction' }}</span>
-                    <span class="transaction-date">{{ transaction.transaction_date.strftime('%Y-%m-%d') }}</span>
-                </div>
-                <span class="transaction-amount {% if transaction.transaction_type == 'income' %}positive{% else %}negative{% endif %}">
-                    {% if transaction.transaction_type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
-                </span>
+
+    <section class="dashboard-section">
+        <div class="section-heading">
+            <h2>Resumo do mês</h2>
+        </div>
+        <div class="totals-grid" id="totals-cards"></div>
+    </section>
+
+    <div class="charts-grid">
+        <section class="dashboard-section chart-card">
+            <div class="section-heading">
+                <h2>Despesas por categoria</h2>
             </div>
-            {% endfor %}
-        </div>
-        <a href="/transactions" class="btn btn-secondary">View All Transactions</a>
-        {% else %}
-        <p>No transactions yet. <a href="/transactions">Add your first transaction</a></p>
-        {% endif %}
-    </div>
-    
-    <div class="dashboard-section">
-        <h2>Financial Goals</h2>
-        {% if goals %}
-        <div class="goals-list">
-            {% for goal in goals %}
-            <div class="goal-item">
-                <div class="goal-info">
-                    <h4>{{ goal.name }}</h4>
-                    <div class="goal-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: {{ (goal.current_amount / goal.target_amount * 100)|round }}%"></div>
-                        </div>
-                        <span class="progress-text">
-                            ${{ "%.2f"|format(goal.current_amount) }} / ${{ "%.2f"|format(goal.target_amount) }}
-                        </span>
-                    </div>
-                </div>
+            <div class="chart-wrapper" data-chart-target="categorias"></div>
+        </section>
+        <section class="dashboard-section chart-card">
+            <div class="section-heading">
+                <h2>Evolução mensal</h2>
             </div>
-            {% endfor %}
-        </div>
-        <a href="/goals" class="btn btn-secondary">View All Goals</a>
-        {% else %}
-        <p>No goals yet. <a href="/goals">Create your first goal</a></p>
-        {% endif %}
+            <div class="chart-wrapper" data-chart-target="evolucao"></div>
+        </section>
     </div>
+
+    <section class="dashboard-section">
+        <div class="section-heading">
+            <h2>Saldos por conta</h2>
+        </div>
+        <div id="contas-list" class="accounts-list"></div>
+    </section>
+
+    <noscript>
+        <p class="empty-state">Ative o JavaScript para visualizar o resumo financeiro.</p>
+    </noscript>
 </div>
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="/static/js/dashboard.js" defer></script>
 {% endblock %}
