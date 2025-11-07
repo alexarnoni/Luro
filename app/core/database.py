@@ -1,14 +1,36 @@
+from sqlalchemy import event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
 from app.core.config import settings
 
 # Create async engine
+database_url = make_url(settings.DATABASE_URL)
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
 )
+
+if database_url.get_backend_name() == "sqlite":
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[arg-type]
+        cursor = dbapi_connection.cursor()
+        pragmas = (
+            text("PRAGMA journal_mode=WAL"),
+            text("PRAGMA synchronous=NORMAL"),
+            text("PRAGMA foreign_keys=ON"),
+            text("PRAGMA busy_timeout=5000"),
+        )
+
+        for pragma in pragmas:
+            cursor.execute(pragma.text)
+            if pragma.text.startswith("PRAGMA journal_mode"):
+                cursor.fetchone()
+        cursor.close()
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(
