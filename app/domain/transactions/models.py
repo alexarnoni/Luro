@@ -36,6 +36,7 @@ class Transaction(Base):
     transaction_date = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    source_hash = Column(String(64), nullable=True, index=True)
 
     # Relationships
     account = relationship("Account", backref="transactions")
