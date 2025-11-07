@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body data-session-cookie-name="{{ SESSION_COOKIE_NAME }}" data-enable-csrf-json="{{ 'true' if ENABLE_CSRF_JSON else 'false' }}">
-    <nav class="navbar">
+    <nav class="navbar" data-nav>
         <div class="container">
             <a href="/" class="logo">Luro</a>
             {% if user %}
@@ -24,6 +24,17 @@
                 <li><a href="/login">Login</a></li>
             </ul>
             {% endif %}
+            <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Alternar para tema escuro">
+                <span class="theme-toggle__icon" aria-hidden="true">
+                    <svg class="theme-toggle__sun" viewBox="0 0 24 24" role="presentation" focusable="false">
+                        <path d="M12 4.75a.75.75 0 0 1-.75-.75V2a.75.75 0 0 1 1.5 0v2a.75.75 0 0 1-.75.75Zm0 16a.75.75 0 0 1-.75-.75v-2a.75.75 0 1 1 1.5 0v2a.75.75 0 0 1-.75.75ZM5.28 6.34a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06L5.28 6.34Zm13.02 12.02a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM4.75 12a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25A.75.75 0 0 1 4.75 12Zm16 0a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25a.75.75 0 0 1-.75.75ZM5.28 17.66 3.86 19.08a.75.75 0 1 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06Zm13.44-11.32a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />
+                    </svg>
+                    <svg class="theme-toggle__moon" viewBox="0 0 24 24" role="presentation" focusable="false">
+                        <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79Z" />
+                    </svg>
+                </span>
+                <span class="theme-toggle__label" data-theme-toggle-text>Modo claro</span>
+            </button>
         </div>
     </nav>
 
@@ -39,6 +50,7 @@
         </div>
     </footer>
 
+    <script src="/static/js/theme.js" defer></script>
     <script src="/static/js/security.js" defer></script>
     {% block extra_js %}{% endblock %}
 </body>

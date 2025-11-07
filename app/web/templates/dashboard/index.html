@@ -3,7 +3,7 @@
 {% block title %}Dashboard - Luro{% endblock %}
 
 {% block content %}
-<div class="dashboard" data-dashboard>
+<div class="dashboard" data-dashboard aria-busy="true">
     <div class="dashboard-header">
         <div>
             <h1>Olá, {{ user.name or user.email }}!</h1>
@@ -19,7 +19,7 @@
         <div class="section-heading">
             <h2>Resumo do mês</h2>
         </div>
-        <div class="totals-grid" id="totals-cards"></div>
+        <div class="totals-grid" id="totals-cards" aria-live="polite"></div>
     </section>
 
     <div class="charts-grid">
@@ -27,13 +27,13 @@
             <div class="section-heading">
                 <h2>Despesas por categoria</h2>
             </div>
-            <div class="chart-wrapper" data-chart-target="categorias"></div>
+            <div class="chart-wrapper" data-chart-target="categorias" aria-live="polite"></div>
         </section>
         <section class="dashboard-section chart-card">
             <div class="section-heading">
                 <h2>Evolução mensal</h2>
             </div>
-            <div class="chart-wrapper" data-chart-target="evolucao"></div>
+            <div class="chart-wrapper" data-chart-target="evolucao" aria-live="polite"></div>
         </section>
     </div>
 
@@ -41,7 +41,7 @@
         <div class="section-heading">
             <h2>Saldos por conta</h2>
         </div>
-        <div id="contas-list" class="accounts-list"></div>
+        <div id="contas-list" class="accounts-list" aria-live="polite"></div>
     </section>
 
     <noscript>
@@ -52,6 +52,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
 <script src="/static/js/dashboard.js" defer></script>
 {% endblock %}
