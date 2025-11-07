@@ -1,166 +1,106 @@
-# Luro - Personal Finance Manager
+# Luro – Personal Finance Manager
 
-Luro is a modern personal finance management web application built with FastAPI, featuring magic link authentication, account tracking, transaction management, and financial goal setting.
+Luro é um gerenciador financeiro pessoal com foco em segurança, autenticação sem senha e visualizações ricas construídas com FastAPI, Jinja e Chart.js. O projeto oferece dashboard interativo, gestão de contas, transações, metas e importação de extratos para agilizar o onboarding financeiro.
 
-## Features
+## Visão geral da arquitetura
 
-- 🔐 **Magic Link Authentication** - Passwordless login via email using Resend
-- 💰 **Account Management** - Track multiple financial accounts (checking, savings, credit, etc.)
-- 📊 **Transaction Tracking** - Manual entry and categorization of income and expenses
-- 🎯 **Financial Goals** - Set and track progress towards savings goals
-- 📈 **Insights** - Get insights into your financial habits
-- 🎨 **Modern UI** - Clean, responsive interface built with Jinja2 templates
+- **Backend**: FastAPI (async) com SQLAlchemy e Alembic.
+- **Templates**: Jinja2 com componentes reutilizáveis.
+- **Frontend**: CSS modular versionado no repositório e scripts vanilla (sem bundler).
+- **Gráficos**: Chart.js via CDN UMD (`cdn.jsdelivr.net`).
+- **Autenticação**: Login por magic link usando Resend.
+- **Infra**: Docker/Docker Compose para desenvolvimento opcional.
 
-## Technology Stack
+## Pré-requisitos
 
-- **Backend**: FastAPI (Python)
-- **Database**: SQLite with SQLAlchemy (async) + Alembic migrations
-- **Frontend**: Jinja2 templates, vanilla CSS
-- **Authentication**: Magic link via Resend API
-- **Deployment**: Docker + docker-compose
+- Python 3.11+
+- SQLite (padrão) ou qualquer banco suportado pelo SQLAlchemy async
+- Node não é necessário (CSS já versionado)
 
-## Project Structure
+## Variáveis de ambiente essenciais
 
-```
-Luro/
-├── app/
-│   ├── core/              # Core configurations and database
-│   │   ├── config.py      # Application settings
-│   │   ├── database.py    # Database setup
-│   │   └── security.py    # Magic link management
-│   ├── domain/            # Domain models
-│   │   ├── users/         # User models
-│   │   ├── accounts/      # Account models
-│   │   ├── transactions/  # Transaction models
-│   │   ├── goals/         # Goal models
-│   │   └── insights/      # Insight models
-│   └── web/               # Web layer
-│       ├── routes/        # Route handlers
-│       ├── templates/     # Jinja2 templates
-│       └── static/        # CSS, JS, images
-├── alembic/               # Database migrations
-├── main.py                # Application entry point
-├── requirements.txt       # Python dependencies
-├── Dockerfile            # Docker configuration
-└── docker-compose.yml    # Docker Compose setup
-```
+Configure um arquivo `.env` na raiz com os valores abaixo (todos disponíveis em `app/core/config.py`):
 
-## Quick Start
+| Variável | Descrição |
+| --- | --- |
+| `DATABASE_URL` | URL de conexão do banco (padrão: `sqlite+aiosqlite:///./luro.db`). |
+| `RESEND_API_KEY` | Chave da API Resend para envio de magic links. |
+| `ENV` | `development` ou `production`; controla cookies e headers seguros. |
+| `ENABLE_CSRF_JSON` | Habilita validação de CSRF para requisições JSON mutáveis. |
+| `RATE_LIMIT_MAX` | Número máximo de requisições em janela para proteção de força bruta. |
+| `RATE_LIMIT_WINDOW_SECONDS` | Janela (em segundos) usada pelo rate limiter. |
+| `RESEND_FROM_EMAIL` | Remetente usado nos e-mails de autenticação. |
 
-### Using Docker (Recommended)
+Outras chaves relevantes: `SECRET_KEY`, `IMPORT_MAX_FILE_MB` e `DEBUG`.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/alexarnoni/Luro.git
-cd Luro
-```
+## Executando localmente (runbook)
 
-2. Create a `.env` file (optional, for production):
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
+1. **Clonar e preparar ambiente**
+   ```bash
+   git clone https://github.com/alexarnoni/Luro.git
+   cd Luro
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   cp .env.example .env  # ajuste conforme necessário
+   ```
 
-3. Run with docker-compose:
-```bash
-docker-compose up
-```
+2. **Inicializar banco e executar migrations**
+   ```bash
+   alembic upgrade head
+   ```
 
-4. Open your browser to `http://localhost:8000`
+3. **Iniciar a aplicação**
+   ```bash
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+   Acesse `http://localhost:8000` para a UI ou `http://localhost:8000/docs` para a documentação OpenAPI.
 
-### Manual Setup
+4. **(Opcional) Docker Compose**
+   ```bash
+   docker-compose up --build
+   ```
 
-1. Clone the repository:
-```bash
-git clone https://github.com/alexarnoni/Luro.git
-cd Luro
-```
+## Considerações de segurança
 
-2. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+- **Cookies de sessão**: enviados com `HttpOnly`, `SameSite=Lax` e `Secure` automático em produção.
+- **CSRF**: middleware `CSRFMiddleware` + `security.js` adicionam/verificam token em requisições JSON mutáveis quando `ENABLE_CSRF_JSON` está ativo.
+- **Rate limiting**: `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS` protegem rotas sensíveis (login/import).
+- **CSP**: `SecurityHeadersMiddleware` aplica `Content-Security-Policy` que permite scripts apenas do próprio host e `cdn.jsdelivr.net` (Chart.js), evitando inline scripts.
+- **SQLite**: `journal_mode=WAL`, `foreign_keys=ON` e `busy_timeout` configurados automaticamente para resiliência.
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+## Importador de transações
 
-4. Create `.env` file:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
+Endpoint `POST /api/import` suporta CSV/OFX até `IMPORT_MAX_FILE_MB` (padrão 5 MB) com dois modos:
 
-5. Run the application:
-```bash
-python main.py
-```
+- `preview`: retorna colunas normalizadas, totais, duplicatas detectadas e sugestões de categoria.
+- `apply`: persiste transações válidas, ignora duplicatas já existentes e pode criar/atualizar regras (`save_rules=true`) para categorização automática futura.
 
-Or with uvicorn directly:
-```bash
-uvicorn main:app --reload
-```
+A deduplicação usa `source_hash`, regras existentes são aplicadas automaticamente e overrides podem forçar categorias específicas. Mapeamentos de colunas customizados são aceitos (`mapping`).
 
-6. Open your browser to `http://localhost:8000`
+## Migrations e boas práticas
 
-## Configuration
+- Sempre execute `alembic revision --autogenerate -m "sua mensagem"` após alterar modelos.
+- Revise o diff gerado e ajuste tipos/nulos manualmente antes de aplicar.
+- Rode `alembic upgrade head` localmente e em ambientes de CI/CD.
+- Sincronize o modelo Python e a migration para evitar divergências.
 
-Key environment variables (see `.env.example`):
+## Estilos e build de assets
 
-- `DATABASE_URL`: Database connection string (default: SQLite)
-- `SECRET_KEY`: Secret key for session management
-- `RESEND_API_KEY`: API key for Resend email service
-- `RESEND_FROM_EMAIL`: Email address to send magic links from
-- `DEBUG`: Enable debug mode (shows magic links in browser for development)
+O CSS principal (`app/web/static/css/style.css`) é versionado diretamente. Não há pipeline de build; alterações devem ser feitas no arquivo e revisadas com atenção ao modo escuro (`html.dark`). Chart.js é carregado via CDN UMD e scripts customizados ficam em `app/web/static/js`.
 
-## Usage
+## Roadmap curto
 
-1. **Login**: Navigate to `/login` and enter your email. In debug mode, the magic link will be displayed on the page. In production, it will be sent via email.
+- Criar UI dedicada para gerenciamento de categorias.
+- Expor interface para importação (atualmente apenas API).
+- Cobertura de testes E2E para fluxos críticos (login, importação, dashboard).
 
-2. **Dashboard**: After logging in, view your financial overview including total balance, accounts, and recent transactions.
+## Checklist de testes manuais
 
-3. **Accounts**: Create and manage multiple financial accounts (checking, savings, credit cards, etc.).
+Antes de abrir PRs, execute manualmente:
 
-4. **Transactions**: Add income and expenses manually, categorize them, and track your spending.
+- [ ] Dashboard: carregamento do resumo mensal (`/dashboard` → cards, gráficos e skeletons).
+- [ ] Chart de categorias: validar exibição de dados e estado vazio com CTA.
+- [ ] Importador: requisitar `POST /api/import` em modo `preview` e `apply` com arquivos CSV/OFX pequenos.
 
-5. **Goals**: Set financial goals with target amounts and dates, track your progress.
-
-## Database Migrations
-
-The application uses Alembic for database migrations. To create a new migration:
-
-```bash
-# Copy the example alembic.ini
-cp alembic.ini.example alembic.ini
-
-# Create a migration
-alembic revision --autogenerate -m "Description of changes"
-
-# Apply migrations
-alembic upgrade head
-```
-
-## Development
-
-The application is structured in layers:
-
-- **Core Layer**: Configuration, database, security
-- **Domain Layer**: Business entities (users, accounts, transactions, goals, insights)
-- **Web Layer**: HTTP routes, templates, static files
-
-To add new features:
-
-1. Create models in the appropriate `app/domain/` directory
-2. Add routes in `app/web/routes/`
-3. Create templates in `app/web/templates/`
-4. Update styles in `app/web/static/css/`
-
-## License
-
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Marcar os itens no PR ajuda a garantir uma experiência consistente para novas contribuições.
