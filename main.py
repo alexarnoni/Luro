@@ -3,7 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.core.database import init_db
-from app.web.routes import auth, dashboard, pages
+from app.core.middleware import CSRFMiddleware, SecurityHeadersMiddleware
+from app.web.routes import api, auth, dashboard, pages
 
 
 @asynccontextmanager
@@ -22,6 +23,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
 
@@ -29,6 +33,7 @@ app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
 app.include_router(pages.router, tags=["pages"])
 app.include_router(auth.router, tags=["auth"])
 app.include_router(dashboard.router, tags=["dashboard"])
+app.include_router(api.router, prefix="/api", tags=["api"])
 
 
 if __name__ == "__main__":

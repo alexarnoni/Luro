@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Request, Depends, Form, HTTPException, Cookie
+from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-from typing import Optional
 from datetime import datetime
 
+from app.core.config import settings
+from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
+from app.core.session import get_current_user
 from app.domain.users.models import User
 from app.domain.accounts.models import Account
 from app.domain.transactions.models import Transaction
@@ -14,23 +16,8 @@ from app.domain.goals.models import Goal
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
-
-
-async def get_current_user(
-    user_email: Optional[str] = Cookie(None),
-    db: AsyncSession = Depends(get_db)
-) -> User:
-    """Get current logged-in user."""
-    if not user_email:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    result = await db.execute(select(User).where(User.email == user_email))
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    
-    return user
+templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
+templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
