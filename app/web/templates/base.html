@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-session-cookie-name="{{ SESSION_COOKIE_NAME }}" data-enable-csrf-json="{{ 'true' if ENABLE_CSRF_JSON else 'false' }}">
     <nav class="navbar">
         <div class="container">
             <a href="/" class="logo">Luro</a>
@@ -39,6 +39,7 @@
         </div>
     </footer>
 
+    <script src="/static/js/security.js" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
