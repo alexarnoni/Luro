@@ -20,12 +20,16 @@ from app.domain.rules.models import Rule  # noqa: F401,E402
 from app.domain.accounts.models import Account  # noqa: F401,E402
 
 DEFAULT_CATEGORIES: List[dict] = [
-    {"name": "Salary", "type": "income", "color": "#4CAF50"},
-    {"name": "Freelance", "type": "income", "color": "#8BC34A"},
-    {"name": "Groceries", "type": "expense", "color": "#FF9800"},
-    {"name": "Rent", "type": "expense", "color": "#F44336"},
-    {"name": "Utilities", "type": "expense", "color": "#03A9F4"},
-    {"name": "Entertainment", "type": "expense", "color": "#9C27B0"},
+    {"name": "Salário", "type": "income", "color": "#2E7D32"},
+    {"name": "Rendimentos", "type": "income", "color": "#66BB6A"},
+    {"name": "Alimentação", "type": "expense", "color": "#FF7043"},
+    {"name": "Moradia", "type": "expense", "color": "#8D6E63"},
+    {"name": "Transporte", "type": "expense", "color": "#29B6F6"},
+    {"name": "Saúde", "type": "expense", "color": "#EF5350"},
+    {"name": "Educação", "type": "expense", "color": "#AB47BC"},
+    {"name": "Lazer", "type": "expense", "color": "#FFCA28"},
+    {"name": "Contas", "type": "expense", "color": "#7E57C2"},
+    {"name": "Outros", "type": "expense", "color": "#78909C"},
 ]
 
 

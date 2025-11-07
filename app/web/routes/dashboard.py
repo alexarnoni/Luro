@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -12,7 +14,10 @@ from app.core.session import get_current_user
 from app.domain.users.models import User
 from app.domain.accounts.models import Account
 from app.domain.transactions.models import Transaction
+from app.domain.categories.models import Category
 from app.domain.goals.models import Goal
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
@@ -145,6 +150,7 @@ async def create_transaction(
     amount: float = Form(...),
     transaction_type: str = Form(...),
     category: str = Form(None),
+    category_id: int | None = Form(None),
     description: str = Form(None),
     transaction_date: str = Form(None),
     user: User = Depends(get_current_user),
@@ -171,12 +177,34 @@ async def create_transaction(
         except ValueError:
             pass
     
+    category_name = category.strip() if category else None
+    category_pk = None
+
+    if category_id is not None:
+        category_result = await db.execute(
+            select(Category).where(
+                Category.id == category_id,
+                Category.user_id == user.id,
+            )
+        )
+        category_obj = category_result.scalar_one_or_none()
+        if not category_obj:
+            raise HTTPException(status_code=404, detail="Category not found")
+        category_pk = category_obj.id
+        if not category_name:
+            category_name = category_obj.name
+    elif category_name:
+        logger.warning(
+            "Transaction created with legacy category string for user %s", user.id
+        )
+
     # Create transaction
     transaction = Transaction(
         account_id=account_id,
         amount=amount,
         transaction_type=transaction_type,
-        category=category,
+        category=category_name,
+        category_id=category_pk,
         description=description,
         transaction_date=trans_date
     )
