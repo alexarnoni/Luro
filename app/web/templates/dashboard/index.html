@@ -39,6 +39,31 @@
 
     <section class="dashboard-section">
         <div class="section-heading">
+            <h2>Insight do mês</h2>
+            <div class="section-actions">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-inline"
+                    data-insight-action
+                    aria-controls="insight-mensal"
+                >
+                    Gerar/Atualizar
+                </button>
+            </div>
+        </div>
+        <article
+            id="insight-mensal"
+            class="insight-card"
+            data-insight-card
+            aria-busy="false"
+        >
+            <p class="insight-message" data-insight-text role="status" aria-live="polite"></p>
+            <p class="insight-hint">Insights gerados por IA. Revise antes de tomar decisões financeiras.</p>
+        </article>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="section-heading">
             <h2>Saldos por conta</h2>
         </div>
         <div id="contas-list" class="accounts-list" aria-live="polite"></div>

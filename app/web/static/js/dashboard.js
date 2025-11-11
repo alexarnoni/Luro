@@ -7,6 +7,9 @@
     const dashboardRoot = document.querySelector('[data-dashboard]');
     const monthInput = document.getElementById('filtro-mes');
     const toastContainer = document.getElementById('toast-container');
+    const insightCard = document.querySelector('[data-insight-card]');
+    const insightMessage = insightCard ? insightCard.querySelector('[data-insight-text]') : null;
+    const insightButton = document.querySelector('[data-insight-action]');
 
     const DEFAULT_CATEGORY_COLOR = '#9ca3af';
     const EMPTY_ICONS = {
@@ -32,6 +35,7 @@
 
     let requestId = 0;
     let palette = null;
+    let insightButtonDefaultLabel = insightButton ? insightButton.textContent.trim() : null;
 
     function getPalette() {
         const styles = window.getComputedStyle(root);
@@ -141,6 +145,121 @@
         const [year, month] = parts.map(Number);
         const date = new Date(Date.UTC(year, month - 1, 1));
         return monthLabelFormatter.format(date);
+    }
+
+    function setInsightMessage(message, state = 'idle') {
+        if (insightCard) {
+            insightCard.dataset.state = state;
+        }
+        if (insightMessage) {
+            insightMessage.textContent = message || '';
+        }
+    }
+
+    function updateInsightButtonLabel(monthValue) {
+        if (!insightButton) return;
+        const label = formatMonthLabel(monthValue);
+        if (label) {
+            insightButton.setAttribute('aria-label', `Gerar ou atualizar insight para ${label}`);
+        } else {
+            insightButton.removeAttribute('aria-label');
+        }
+    }
+
+    function resetInsightMessage(monthValue) {
+        if (!insightCard || !insightMessage) return;
+        const label = formatMonthLabel(monthValue);
+        const suffix = label ? ` para ${label}` : '';
+        setInsightMessage(
+            `Nenhum insight gerado${suffix}. Clique em "Gerar/Atualizar" para obter uma análise personalizada.`,
+            'empty'
+        );
+        updateInsightButtonLabel(monthValue);
+        insightCard.setAttribute('aria-busy', 'false');
+        if (insightButton) {
+            insightButton.disabled = false;
+            insightButton.setAttribute('aria-busy', 'false');
+            if (!insightButtonDefaultLabel) {
+                insightButtonDefaultLabel = insightButton.textContent.trim();
+            } else {
+                insightButton.textContent = insightButtonDefaultLabel;
+            }
+        }
+    }
+
+    function setInsightLoading(isLoading) {
+        if (!insightCard) return;
+        insightCard.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        if (insightButton) {
+            if (!insightButtonDefaultLabel) {
+                insightButtonDefaultLabel = insightButton.textContent.trim();
+            }
+            insightButton.disabled = isLoading;
+            insightButton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+            insightButton.textContent = isLoading ? 'Gerando...' : insightButtonDefaultLabel;
+        }
+        if (isLoading) {
+            setInsightMessage('Gerando insight do mês, isso pode levar alguns segundos...', 'loading');
+        }
+    }
+
+    async function gerarInsightDoMes() {
+        if (!monthInput || !monthInput.value) {
+            showToast('Selecione um mês válido.', 'error');
+            return;
+        }
+
+        const monthValue = monthInput.value;
+        setInsightLoading(true);
+
+        try {
+            const response = await fetch(`/api/insights/generate?month=${encodeURIComponent(monthValue)}`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = null;
+            }
+
+            if (!response.ok) {
+                const detail = (data && (data.detail || data.message)) || 'Não foi possível gerar um insight no momento.';
+                const state = response.status === 404 ? 'empty' : 'error';
+                setInsightMessage(detail, state);
+                showToast(detail, response.status === 404 ? 'info' : 'error');
+                return;
+            }
+
+            const insightText = typeof data?.insight === 'string' ? data.insight.trim() : '';
+            if (insightText) {
+                setInsightMessage(insightText, 'success');
+                showToast('Insight atualizado com sucesso!', 'success');
+            } else {
+                const fallbackMessage = 'Nenhum insight foi retornado. Tente novamente em instantes.';
+                setInsightMessage(fallbackMessage, 'error');
+                showToast(fallbackMessage, 'error');
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Não foi possível gerar um insight no momento.';
+            setInsightMessage(message, 'error');
+            showToast(message, 'error');
+        } finally {
+            setInsightLoading(false);
+        }
+    }
+
+    function initializeInsightCard() {
+        if (!insightButton) return;
+        insightButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            gerarInsightDoMes();
+        });
     }
 
     function setBusyState(isBusy) {
@@ -491,6 +610,13 @@
                 description: 'Recarregue a página ou tente novamente mais tarde.'
             });
         }
+        if (insightCard) {
+            setInsightMessage(
+                'Não foi possível carregar os dados financeiros. Gere o insight novamente após recarregar a página.',
+                'error'
+            );
+            insightCard.setAttribute('aria-busy', 'false');
+        }
     }
 
     async function carregarResumo(mes, ano) {
@@ -537,6 +663,7 @@
         if (!monthInput.value) {
             monthInput.value = defaultMonth;
         }
+        resetInsightMessage(monthInput.value);
         const [yearStr, monthStr] = monthInput.value.split('-');
         carregarResumo(monthStr, yearStr);
 
@@ -551,6 +678,7 @@
                 showToast('Selecione um mês válido.');
                 return;
             }
+            resetInsightMessage(value);
             carregarResumo(month, year);
         });
     }
@@ -573,5 +701,6 @@
         applyChartDefaults();
         showLoadingState();
         setupFilters();
+        initializeInsightCard();
     });
 })();

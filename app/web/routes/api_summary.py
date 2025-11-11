@@ -1,7 +1,8 @@
 """API routes for dashboard financial summaries."""
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, case, func, select
@@ -10,43 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.session import get_current_user
 from app.domain.accounts.models import Account
-from app.domain.categories.models import Category
+from app.domain.insights.services import get_or_create_monthly_insight
 from app.domain.transactions.models import Transaction
 from app.domain.users.models import User
+from app.services.analytics import build_month_summary
 
 router = APIRouter()
 
-DEFAULT_CATEGORY_COLOR = "#9ca3af"
 OTHER_CATEGORY_COLOR = "#d1d5db"
-MONTH_SERIES_SIZE = 6
-
-
-def _month_start(year: int, month: int) -> date:
-    return date(year, month, 1)
-
-
-def _next_month(value: date) -> date:
-    if value.month == 12:
-        return date(value.year + 1, 1, 1)
-    return date(value.year, value.month + 1, 1)
-
-
-def _as_datetime(value: date) -> datetime:
-    return datetime.combine(value, time.min)
-
-
-def _get_month_series() -> list[date]:
-    today = date.today()
-    cursor = date(today.year, today.month, 1)
-    series: list[date] = []
-    for _ in range(MONTH_SERIES_SIZE):
-        series.append(cursor)
-        if cursor.month == 1:
-            cursor = date(cursor.year - 1, 12, 1)
-        else:
-            cursor = date(cursor.year, cursor.month - 1, 1)
-    series.reverse()
-    return series
 
 
 @router.get("/resumo")
@@ -55,130 +27,62 @@ async def get_financial_summary(
     ano: int | None = Query(default=None, ge=1900, le=2100),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Return a summary of financial data for the requested month."""
 
     today = date.today()
     target_year = ano or today.year
     target_month = mes or today.month
+    month_key = f"{target_year:04d}-{target_month:02d}"
 
-    first_day = _month_start(target_year, target_month)
-    last_day_exclusive = _next_month(first_day)
+    analytics_summary = await build_month_summary(user.id, month_key, db)
+    internal = analytics_summary.get("_internal", {})
+    category_details: list[dict[str, Any]] = internal.get("category_details", [])
+    month_series = internal.get("month_series", [])
+    series_data = internal.get("series_data", {})
 
-    month_start_dt = _as_datetime(first_day)
-    month_end_dt = _as_datetime(last_day_exclusive)
-
-    # Totals (income vs expenses)
-    totals_stmt = (
-        select(
-            Transaction.transaction_type,
-            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
-        )
-        .join(Account, Transaction.account_id == Account.id)
-        .where(Account.user_id == user.id)
-        .where(Transaction.transaction_date >= month_start_dt)
-        .where(Transaction.transaction_date < month_end_dt)
-        .group_by(Transaction.transaction_type)
-    )
-
-    totals_result = await db.execute(totals_stmt)
-    totals_map = {row.transaction_type: float(row.total or 0) for row in totals_result}
-    receitas = totals_map.get("income", 0.0)
-    despesas = totals_map.get("expense", 0.0)
+    totals = analytics_summary["totals"]
+    receitas = totals.get("income", 0.0)
+    despesas = totals.get("expense", 0.0)
     saldo = receitas - despesas
 
-    # Expenses grouped by category
-    category_stmt = (
-        select(
-            Transaction.category_id,
-            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
-            Category.name,
-            Category.color,
-        )
-        .join(Account, Transaction.account_id == Account.id)
-        .outerjoin(Category, Transaction.category_id == Category.id)
-        .where(Account.user_id == user.id)
-        .where(Transaction.transaction_type == "expense")
-        .where(Transaction.transaction_date >= month_start_dt)
-        .where(Transaction.transaction_date < month_end_dt)
-        .group_by(Transaction.category_id, Category.name, Category.color)
-    )
-
-    category_result = await db.execute(category_stmt)
-    categories = []
-    for row in category_result:
-        total_value = float(row.total or 0)
-        if total_value <= 0:
-            continue
-        category_id = row.category_id
-        name = row.name or ("Sem categoria" if category_id is None else "Categoria")
-        if category_id is None:
-            name = "Sem categoria"
-        color = row.color or DEFAULT_CATEGORY_COLOR
-        categories.append(
-            {
-                "category_id": category_id,
-                "name": name,
-                "total": total_value,
-                "color": color,
-            }
-        )
-
-    categories.sort(key=lambda item: item["total"], reverse=True)
-    top_categories = categories[:5]
-    if len(categories) > 5:
-        others_total = sum(item["total"] for item in categories[5:])
+    top_categories = category_details[:5]
+    if len(category_details) > 5:
+        others_total = sum(item["total"] for item in category_details[5:])
         if others_total > 0:
-            top_categories.append(
+            top_categories = top_categories + [
                 {
                     "category_id": None,
                     "name": "Outras",
                     "total": others_total,
                     "color": OTHER_CATEGORY_COLOR,
                 }
-            )
+            ]
 
-    # Monthly evolution (last N months, independent from selected month)
-    month_series = _get_month_series()
-    series_start = _as_datetime(month_series[0])
-    series_end = _as_datetime(_next_month(month_series[-1]))
-    month_keys = [month.strftime("%Y-%m") for month in month_series]
-
-    series_data = {
-        key: {
-            "mes": key,
-            "despesas": 0.0,
-            "receitas": 0.0,
+    por_categoria = [
+        {
+            "category_id": item["category_id"],
+            "name": item["name"],
+            "total": item["total"],
+            "color": item["color"],
         }
-        for key in month_keys
-    }
+        for item in top_categories
+    ]
 
-    monthly_stmt = (
-        select(
-            Transaction.transaction_date,
-            Transaction.transaction_type,
-            Transaction.amount,
-        )
-        .join(Account, Transaction.account_id == Account.id)
-        .where(Account.user_id == user.id)
-        .where(Transaction.transaction_date >= series_start)
-        .where(Transaction.transaction_date < series_end)
-    )
+    por_mes = [
+        {
+            "mes": key,
+            "receitas": series_data.get(key, {}).get("income", 0.0),
+            "despesas": series_data.get(key, {}).get("expense", 0.0),
+        }
+        for key in month_series
+    ]
 
-    monthly_result = await db.execute(monthly_stmt)
-    for row in monthly_result:
-        key = row.transaction_date.strftime("%Y-%m")
-        if key not in series_data:
-            continue
-        amount = float(row.amount or 0)
-        if row.transaction_type == "income":
-            series_data[key]["receitas"] += amount
-        elif row.transaction_type == "expense":
-            series_data[key]["despesas"] += amount
+    month_start_dt = internal.get("month_start")
+    month_end_dt = internal.get("month_end")
+    if month_start_dt is None or month_end_dt is None:
+        raise ValueError("monthly analytics missing date boundaries")
 
-    por_mes = [series_data[key] for key in month_keys]
-
-    # Account balances within the selected month
     balance_case = case(
         (Transaction.transaction_type == "income", Transaction.amount),
         (Transaction.transaction_type == "expense", -Transaction.amount),
@@ -214,13 +118,37 @@ async def get_financial_summary(
         for row in accounts_result
     ]
 
-    return {
+    summary_response: dict[str, Any] = {
         "totais": {
             "receitas": receitas,
             "despesas": despesas,
             "saldo": saldo,
         },
-        "porCategoria": top_categories,
+        "porCategoria": por_categoria,
         "porMes": por_mes,
         "contas": contas,
     }
+
+    insight = await get_or_create_monthly_insight(
+        db,
+        user_id=user.id,
+        period=month_key,
+        summary_payload={
+            key: value
+            for key, value in analytics_summary.items()
+            if key != "_internal"
+        },
+    )
+
+    if insight is not None:
+        summary_response["insights"] = {
+            "id": insight.id,
+            "title": insight.title,
+            "content": insight.content,
+            "period": insight.period,
+            "generatedAt": insight.created_at.isoformat() if insight.created_at else None,
+        }
+    else:
+        summary_response["insights"] = None
+
+    return summary_response
