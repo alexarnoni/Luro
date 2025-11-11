@@ -1,0 +1,15 @@
+[Unit]
+Description=Luro FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/luro
+EnvironmentFile=/opt/luro/.env
+ExecStart=/usr/bin/env bash -lc 'cd /opt/luro && source venv/bin/activate && uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
