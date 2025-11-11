@@ -5,7 +5,7 @@ import asyncio
 import json as _json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
-from urllib import parse, request, error
+from urllib import error, parse, request
 
 
 class HTTPStatusError(Exception):
@@ -30,7 +30,7 @@ class Request:
 class Response:
     """HTTP response wrapper compatible with httpx subset."""
 
-    def __init__(self, status_code: int, content: bytes, headers: Optional[Dict[str, str]] = None, request_obj: Optional[Request] = None) -> None:
+    def __init__(self, status_code: int, content: bytes, headers: Optional[Dict[str, str]] = None, request_obj: Optional["Request"] = None) -> None:
         self.status_code = status_code
         self._content = content
         self.headers = headers or {}

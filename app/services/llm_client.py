@@ -5,9 +5,25 @@ import json
 import os
 from typing import Any
 
-import httpx
-
 from app.core.config import settings
+
+
+def _should_use_httpx_stub() -> bool:
+    """Return True when the lightweight httpx stub should be used."""
+
+    env = (os.getenv("ENV") or getattr(settings, "ENV", "")).strip().lower()
+    if env == "production":
+        return False
+
+    raw_flag = (os.getenv("DEBUG_HTTPX_STUB") or "").strip().lower()
+    return raw_flag in {"1", "true", "yes", "on"}
+
+
+if _should_use_httpx_stub():
+    from app.dev import httpx_stub as httpx  # type: ignore  # pragma: no cover
+else:
+    import httpx
+
 
 PROMPT_SYSTEM = (
     "Você é um analista financeiro didático que gera insights claros, sem jargões, "
