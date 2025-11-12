@@ -61,8 +61,30 @@ async def login(
     if settings.RESEND_API_KEY:
         try:
             resend.api_key = settings.RESEND_API_KEY
+
+            # Validate and normalize the `from` field expected by Resend.
+            # Accepts either plain email (user@example.com) or a display name format
+            # (Name <user@example.com>). If a plain email is provided, wrap it
+            # with the application name for better deliverability/clarity.
+            import re
+
+            from_raw = (settings.RESEND_FROM_EMAIL or "").strip()
+            EMAIL_RE = re.compile(r"^[^@<>\s]+@[^@<>\s]+\.[^@<>\s]+$")
+            NAME_EMAIL_RE = re.compile(r"^.+ <[^@<>\s]+@[^@<>\s]+\.[^@<>\s]+>$")
+
+            if EMAIL_RE.match(from_raw):
+                from_field = f"{settings.APP_NAME} <{from_raw}>"
+            elif NAME_EMAIL_RE.match(from_raw):
+                from_field = from_raw
+            else:
+                logger.warning(
+                    "RESEND_FROM_EMAIL value '%s' is invalid; falling back to noreply",
+                    from_raw,
+                )
+                from_field = f"{settings.APP_NAME} <noreply@example.com>"
+
             resend.Emails.send({
-                "from": settings.RESEND_FROM_EMAIL,
+                "from": from_field,
                 "to": email,
                 "subject": f"Login to {settings.APP_NAME}",
                 "html": f"""

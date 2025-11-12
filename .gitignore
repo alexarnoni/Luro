@@ -49,3 +49,47 @@ alembic.ini
 
 # Logs
 *.log
+
+# --- Extra: ambientes e chaves ---
+.env.*
+!example.env
+*.key
+*.pem
+
+# --- Virtual env alternativos ---
+.venv/
+
+# --- Logs, cache e temporários ---
+tmp/
+temp/
+.cache/
+*.bak
+*.orig
+*.pdb
+
+# --- Testes ---
+.coverage
+htmlcov/
+pytest_cache/
+tests/__pycache__/
+
+# --- Alembic versões compiladas ---
+alembic/versions/__pycache__/
+
+# --- Frontend / web ---
+node_modules/
+*.map
+app/web/static/js/*.map
+app/web/static/css/*.map
+
+# --- Deploy / sistema ---
+*.pid
+*.sock
+
+# --- SO / sistema ---
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+luro.db-shm
+luro.db-wal
