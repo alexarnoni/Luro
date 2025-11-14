@@ -33,9 +33,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4.1-mini"
     INSIGHTS_MAX_PER_MONTH: int = 5
-    
-    class Config:
-        env_file = ".env"
+
+    # Pydantic v2 compatible settings: read .env and ignore extra env vars
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore",
+    }
 
 
 settings = Settings()
