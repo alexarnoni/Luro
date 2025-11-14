@@ -1,37 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Luro{% endblock %}
+{% block title %}{{ _('Painel - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="dashboard" data-dashboard aria-busy="true">
     <div class="dashboard-header">
         <div>
-            <h1>Olá, {{ user.name or user.email }}!</h1>
-            <p class="dashboard-subtitle">Acompanhe suas finanças e visualize tendências dos últimos meses.</p>
+            <h1>{{ _('Olá, %(username)s!') % {'username': (user.name or user.email)} }}</h1>
+            <p class="dashboard-subtitle">{{ _('Acompanhe suas finanças e visualize tendências dos últimos meses.') }}</p>
         </div>
+        <!-- expose server-side total balance for JS to render "Saldo das contas" card -->
+        <div id="page-data" style="display:none;" data-total-balance="{{ total_balance or 0 }}"></div>
         <div class="dashboard-filters">
-            <label for="filtro-mes">Mês de referência</label>
+            <label for="filtro-mes">{{ _('Mês de referência') }}</label>
             <input type="month" id="filtro-mes" name="filtro-mes" class="form-control" />
         </div>
     </div>
 
     <section class="dashboard-section">
         <div class="section-heading">
-            <h2>Resumo do mês</h2>
+            <h2>{{ _('Resumo do mês') }}</h2>
         </div>
         <div class="totals-grid" id="totals-cards" aria-live="polite"></div>
     </section>
 
     <div class="charts-grid">
         <section class="dashboard-section chart-card">
-            <div class="section-heading">
-                <h2>Despesas por categoria</h2>
+                <div class="section-heading">
+            <h2>{{ _('Despesas por categoria') }}</h2>
             </div>
             <div class="chart-wrapper" data-chart-target="categorias" aria-live="polite"></div>
         </section>
         <section class="dashboard-section chart-card">
             <div class="section-heading">
-                <h2>Evolução mensal</h2>
+            <h2>{{ _('Evolução mensal') }}</h2>
             </div>
             <div class="chart-wrapper" data-chart-target="evolucao" aria-live="polite"></div>
         </section>
@@ -39,7 +41,7 @@
 
     <section class="dashboard-section">
         <div class="section-heading">
-            <h2>Insight do mês</h2>
+            <h2>{{ _('Insight do mês') }}</h2>
             <div class="section-actions">
                 <button
                     type="button"
@@ -47,7 +49,7 @@
                     data-insight-action
                     aria-controls="insight-mensal"
                 >
-                    Gerar/Atualizar
+                    {{ _('Gerar/Atualizar') }}
                 </button>
             </div>
         </div>
@@ -58,19 +60,19 @@
             aria-busy="false"
         >
             <p class="insight-message" data-insight-text role="status" aria-live="polite"></p>
-            <p class="insight-hint">Insights gerados por IA. Revise antes de tomar decisões financeiras.</p>
+            <p class="insight-hint">{{ _('Insights gerados por IA. Revise antes de tomar decisões financeiras.') }}</p>
         </article>
     </section>
 
     <section class="dashboard-section">
         <div class="section-heading">
-            <h2>Saldos por conta</h2>
+            <h2>{{ _('Saldos por conta') }}</h2>
         </div>
         <div id="contas-list" class="accounts-list" aria-live="polite"></div>
     </section>
 
     <noscript>
-        <p class="empty-state">Ative o JavaScript para visualizar o resumo financeiro.</p>
+        <p class="empty-state">{{ _('Ative o JavaScript para visualizar o resumo financeiro.') }}</p>
     </noscript>
 </div>
 <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>

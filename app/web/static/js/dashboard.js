@@ -7,6 +7,8 @@
     const dashboardRoot = document.querySelector('[data-dashboard]');
     const monthInput = document.getElementById('filtro-mes');
     const toastContainer = document.getElementById('toast-container');
+    const pageDataEl = document.getElementById('page-data');
+    const pageTotalBalance = pageDataEl ? Number(pageDataEl.dataset.totalBalance || 0) : null;
     const insightCard = document.querySelector('[data-insight-card]');
     const insightMessage = insightCard ? insightCard.querySelector('[data-insight-text]') : null;
     const insightButton = document.querySelector('[data-insight-action]');
@@ -358,6 +360,17 @@
         const despesas = Number(totais.despesas ?? 0);
         const saldo = Number.isFinite(totais.saldo) ? Number(totais.saldo) : receitas - despesas;
 
+        // compute current accounts total: prefer server-provided pageTotalBalance (current balances)
+        // otherwise, fall back to summing payload contas (which are month-scope balances)
+        let contasTotal = null;
+        if (Number.isFinite(pageTotalBalance)) {
+            contasTotal = pageTotalBalance;
+        } else if (Array.isArray(data?.contas)) {
+            contasTotal = data.contas.reduce((acc, c) => acc + (Number(c?.saldo ?? 0)), 0);
+        } else {
+            contasTotal = 0;
+        }
+
         totalsContainer.innerHTML = `
             <div class="stat-card total-income">
                 <h3>Receitas</h3>
@@ -370,6 +383,10 @@
             <div class="stat-card total-balance">
                 <h3>Saldo</h3>
                 <p class="stat-value">${formatCurrency(saldo)}</p>
+            </div>
+            <div class="stat-card accounts-balance">
+                <h3>Saldo das contas</h3>
+                <p class="stat-value">${formatCurrency(contasTotal)}</p>
             </div>
         `;
     }

@@ -37,7 +37,9 @@ class Transaction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     source_hash = Column(String(64), nullable=True, index=True)
+    goal_id = Column(Integer, ForeignKey("goals.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     account = relationship("Account", backref="transactions")
     category_rel = relationship("Category", back_populates="transactions")
+    goal = relationship("Goal", backref="transactions")

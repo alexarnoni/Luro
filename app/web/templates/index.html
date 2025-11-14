@@ -1,35 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Luro - Personal Finance Manager{% endblock %}
+{% block title %}{{ _('Luro - Personal Finance Manager') }}{% endblock %}
 
 {% block content %}
 <div class="hero">
-    <h1>Welcome to Luro</h1>
-    <p class="subtitle">Your personal finance management solution</p>
-    <p>Track your accounts, manage transactions, and achieve your financial goals.</p>
+    <h1>{{ _('Welcome to Luro') }}</h1>
+    <p class="subtitle">{{ _('Your personal finance management solution') }}</p>
+    <p>{{ _('Monitore suas contas, gerencie transações e alcance seus objetivos financeiros.') }}</p>
     <div class="cta-buttons">
-        <a href="/login" class="btn btn-primary">Get Started</a>
+    <a href="/login" class="btn btn-primary">{{ _('Começar') }}</a>
     </div>
 </div>
 
 <div class="features">
-    <h2>Features</h2>
+    <h2>{{ _('Features') }}</h2>
     <div class="feature-grid">
         <div class="feature-card">
-            <h3>💰 Account Management</h3>
-            <p>Track multiple accounts and monitor your balances in real-time.</p>
+            <h3>💰 {{ _('Account Management') }}</h3>
+            <p>{{ _('Acompanhe várias contas e monitore seus saldos em tempo real.') }}</p>
         </div>
         <div class="feature-card">
-            <h3>📊 Transaction Tracking</h3>
-            <p>Record and categorize all your income and expenses manually.</p>
+            <h3>📊 {{ _('Transaction Tracking') }}</h3>
+            <p>{{ _('Record and categorize all your income and expenses manually.') }}</p>
         </div>
         <div class="feature-card">
-            <h3>🎯 Financial Goals</h3>
-            <p>Set and track progress towards your financial objectives.</p>
+            <h3>🎯 {{ _('Metas financeiras') }}</h3>
+            <p>{{ _('Set and track progress towards your financial objectives.') }}</p>
         </div>
         <div class="feature-card">
-            <h3>📈 Insights</h3>
-            <p>Get personalized insights about your spending and saving habits.</p>
+            <h3>📈 {{ _('Insights') }}</h3>
+            <p>{{ _('Get personalized insights about your spending and saving habits.') }}</p>
         </div>
     </div>
 </div>

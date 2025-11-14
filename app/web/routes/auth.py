@@ -14,11 +14,13 @@ from app.core.database import get_db
 from app.core.rate_limit import rate_limiter
 from app.core.security import magic_link_manager
 from app.domain.users.models import User
+from app.core import i18n
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/web/templates")
 templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
 templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
+templates.env.globals.setdefault("_", i18n.gettext_proxy)
 
 logger = logging.getLogger(__name__)
 

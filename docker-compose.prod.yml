@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    image: luro:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    volumes:
+      - ./app/web/static:/app/app/web/static:ro
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: luro
+      POSTGRES_USER: luro
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - luro-db:/var/lib/postgresql/data
+
+volumes:
+  luro-db:

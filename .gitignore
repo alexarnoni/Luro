@@ -1,3 +1,85 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local env / secrets
+.env
+.env.*
+env/
+ENV/
+env.bak/
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+
+# Database files
+luro.db
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+.docker/*
+
+# Logs
+*.log
+
+# Static build artifacts
+staticfiles/
+
+# Node modules (if any)
+node_modules/
 # Python
 __pycache__/
 *.py[cod]

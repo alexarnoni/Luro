@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.core.database import init_db
 from app.core.middleware import CSRFMiddleware, SecurityHeadersMiddleware
+from app.core.i18n import I18nMiddleware, gettext_proxy
 from app.web.routes import api, auth, dashboard, pages
 
 
@@ -25,6 +26,8 @@ app = FastAPI(
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CSRFMiddleware)
+# Internationalization middleware - sets a per-request translator
+app.add_middleware(I18nMiddleware)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/web/static"), name="static")

@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Transactions - Luro{% endblock %}
+{% block title %}{{ _('Transações - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>Transactions</h1>
+    <h1>{{ _('Transações') }}</h1>
     <button type="button" class="btn btn-primary" data-toggle-target="#transaction-form" data-toggle-focus="#account_id" aria-controls="transaction-form" aria-expanded="false">
-        + Add Transaction
+    + {{ _('Adicionar transação') }}
     </button>
 </div>
 
 <section id="transaction-form" class="form-card" hidden aria-hidden="true">
-    <h2>Add New Transaction</h2>
+    <h2>{{ _('Adicionar nova transação') }}</h2>
     <form method="post" action="/transactions">
         <div class="form-group">
-            <label for="account_id">Account</label>
+            <label for="account_id">{{ _('Account') }}</label>
             <select id="account_id" name="account_id" required class="form-control" aria-describedby="account-help">
-                <option value="">Select an account</option>
+                <option value="">{{ _('Select an account') }}</option>
                 {% for account in accounts %}
                 <option value="{{ account.id }}">{{ account.name }}</option>
                 {% endfor %}
@@ -25,38 +25,38 @@
         </div>
 
         <div class="form-group">
-            <label for="transaction_type">Type</label>
+            <label for="transaction_type">{{ _('Type') }}</label>
             <select id="transaction_type" name="transaction_type" required class="form-control">
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
+                <option value="income">{{ _('Income') }}</option>
+                <option value="expense">{{ _('Expense') }}</option>
             </select>
         </div>
         
         <div class="form-group">
-            <label for="amount">Amount</label>
+            <label for="amount">{{ _('Amount') }}</label>
             <input type="number" id="amount" name="amount" step="0.01" min="0" required class="form-control" placeholder="0.00" aria-describedby="amount-help">
-            <span class="form-hint" id="amount-help">Informe valores positivos; o tipo define se é despesa ou receita.</span>
+            <span class="form-hint" id="amount-help">{{ _('Enter positive values; the type determines whether it is an expense or income.') }}</span>
         </div>
 
         <div class="form-group">
-            <label for="category">Category</label>
-            <input type="text" id="category" name="category" class="form-control" placeholder="e.g., Groceries, Salary" aria-describedby="category-help">
-            <span class="form-hint" id="category-help">Categorias ajudam a entender seus gastos. Você pode cadastrá-las depois.</span>
+            <label for="category">{{ _('Category') }}</label>
+            <input type="text" id="category" name="category" class="form-control" placeholder="{{ _('e.g., Groceries, Salary') }}" aria-describedby="category-help">
+            <span class="form-hint" id="category-help">{{ _('Categorias ajudam a entender seus gastos. Você pode adicioná-las depois.') }}</span>
         </div>
         
         <div class="form-group">
-            <label for="description">Description</label>
-            <input type="text" id="description" name="description" class="form-control" placeholder="Optional description">
+            <label for="description">{{ _('Description') }}</label>
+            <input type="text" id="description" name="description" class="form-control" placeholder="{{ _('Optional description') }}">
         </div>
         
         <div class="form-group">
-            <label for="transaction_date">Date</label>
+            <label for="transaction_date">{{ _('Date') }}</label>
             <input type="datetime-local" id="transaction_date" name="transaction_date" class="form-control">
         </div>
         
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add Transaction</button>
-            <button type="button" class="btn btn-secondary" data-close-target="#transaction-form">Cancel</button>
+            <button type="submit" class="btn btn-primary">{{ _('Adicionar transação') }}</button>
+            <button type="button" class="btn btn-secondary" data-close-target="#transaction-form">{{ _('Cancelar') }}</button>
         </div>
     </form>
 </section>
@@ -66,24 +66,45 @@
     <table>
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Account</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Amount</th>
+                <th>{{ _('Date') }}</th>
+                <th>{{ _('Account') }}</th>
+                <th>{{ _('Type') }}</th>
+                <th>{{ _('Category') }}</th>
+                <th>{{ _('Description') }}</th>
+                <th>{{ _('Amount') }}</th>
+                <th>{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for transaction in transactions %}
-            <tr>
+            <tr data-txn-row="{{ transaction.id }}">
                 <td>{{ transaction.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ transaction.account.name }}</td>
                 <td><span class="badge badge-{{ transaction.transaction_type }}">{{ transaction.transaction_type|title }}</span></td>
                 <td>{{ transaction.category or '-' }}</td>
-                <td>{{ transaction.description or '-' }}</td>
-                <td class="{% if transaction.transaction_type == 'income' %}positive{% else %}negative{% endif %}">
-                    {% if transaction.transaction_type == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                <td class="txn-desc">{{ transaction.description or '-' }}</td>
+                <td class="txn-amount {% if transaction.transaction_type == 'income' %}positive{% else %}negative{% endif %}">
+                    {% if transaction.transaction_type == 'income' %}+{% else %}-{% endif %}R$ {{ "%.2f"|format(transaction.amount) }}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-ghost" data-toggle-target="#txn-edit-{{ transaction.id }}">{{ _('Editar') }}</button>
+                    <button type="button" class="btn btn-danger" data-delete-txn="{{ transaction.id }}">{{ _('Excluir') }}</button>
+                </td>
+            </tr>
+            <tr id="txn-edit-{{ transaction.id }}" class="txn-edit-row" hidden>
+                <td colspan="7">
+                    <form action="/transactions/{{ transaction.id }}/edit" method="post" class="txn-edit-form-ajax" data-txn-id="{{ transaction.id }}">
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input name="description" class="form-control" value="{{ transaction.description or '' }}" placeholder="{{ _('Description') }}">
+                            <input name="amount" class="form-control" value="{{ '%.2f'|format(transaction.amount) }}" placeholder="{{ _('Amount') }}">
+                            <select name="transaction_type" class="form-control">
+                                    <option value="income" {% if transaction.transaction_type=='income' %}selected{% endif %}>{{ _('Income') }}</option>
+                                    <option value="expense" {% if transaction.transaction_type=='expense' %}selected{% endif %}>{{ _('Expense') }}</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">{{ _('Salvar') }}</button>
+                            <button type="button" class="btn btn-secondary" data-close-target="#txn-edit-{{ transaction.id }}">{{ _('Cancelar') }}</button>
+                        </div>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
@@ -94,16 +115,18 @@
         <span class="empty-state__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false" role="presentation"><path d="M5 4a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H5Zm0 2h14a1 1 0 0 1 1 1v1H4V7a1 1 0 0 1 1-1Zm-1 4h16v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7Zm5 2v2H6v-2h3Zm5 0v2h-3v-2h3Z"/></svg>
         </span>
-        <h2 class="empty-state__title">Nenhuma transação por aqui</h2>
-        <p class="empty-state__description">Adicione lançamentos para acompanhar entradas e saídas ou importe um extrato existente.</p>
+    <h2 class="empty-state__title">{{ _('Ainda não há transações') }}</h2>
+    <p class="empty-state__description">{{ _('Adicione lançamentos para registrar entradas e saídas ou importe um extrato existente.') }}</p>
         <div class="empty-state__actions">
-            <button type="button" class="btn btn-primary" data-toggle-target="#transaction-form" data-toggle-focus="#account_id" aria-controls="transaction-form" aria-expanded="false">Adicionar transação</button>
-            <a class="btn btn-ghost" href="/transactions" aria-label="Importar lançamentos">Importar CSV/OFX</a>
+            <button type="button" class="btn btn-primary" data-toggle-target="#transaction-form" data-toggle-focus="#account_id" aria-controls="transaction-form" aria-expanded="false">{{ _('Adicionar transação') }}</button>
+            <a class="btn btn-ghost" href="/transactions" aria-label="{{ _('Importar transações') }}">{{ _('Importar CSV/OFX') }}</a>
         </div>
     </div>
     {% endif %}
 </div>
 {% block extra_js %}
 <script src="/static/js/ui.js" defer></script>
+<script src="/static/js/toast.js" defer></script>
+<script src="/static/js/transactions.js" defer></script>
 {% endblock %}
 {% endblock %}

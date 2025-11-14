@@ -1,0 +1,395 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Luro 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-14 00:00+0000\n"
+"PO-Revision-Date: 2025-11-14 00:00+0000\n"
+"Last-Translator: Auto <>\n"
+"Language-Team: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Account"
+msgstr ""
+
+msgid "Account Name"
+msgstr ""
+
+msgid "Account Type"
+msgstr ""
+
+msgid "Account updated"
+msgstr ""
+
+msgid "Accounts"
+msgstr ""
+
+msgid "Accounts - Luro"
+msgstr ""
+
+msgid "Acompanhe suas finanças e visualize tendências dos últimos meses."
+msgstr ""
+
+msgid "Actions"
+msgstr ""
+
+msgid "Add Account"
+msgstr ""
+
+msgid "Add Goal"
+msgstr ""
+
+msgid "Add New Account"
+msgstr ""
+
+msgid "Add New Goal"
+msgstr ""
+
+msgid "Add New Transaction"
+msgstr ""
+
+msgid "Add Transaction"
+msgstr ""
+
+msgid ""
+"Add entries to track inflows and outflows or import an existing statement."
+msgstr ""
+
+msgid "Add transaction"
+msgstr ""
+
+msgid "Amount"
+msgstr ""
+
+msgid "Ative o JavaScript para visualizar o resumo financeiro."
+msgstr ""
+
+msgid "Balance"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Categories help you understand your spending. You can add them later."
+msgstr ""
+
+msgid "Category"
+msgstr ""
+
+msgid "Checking"
+msgstr ""
+
+msgid ""
+"Click the link in the email to login. The link will expire in 15 minutes."
+msgstr ""
+
+msgid "Completed"
+msgstr ""
+
+msgid "Contribute"
+msgstr ""
+
+msgid "Create Account"
+msgstr ""
+
+msgid "Create Goal"
+msgstr ""
+
+msgid "Create account"
+msgstr ""
+
+msgid "Credit Card"
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Dashboard - Luro"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Debug Mode"
+msgstr ""
+
+msgid "Description"
+msgstr ""
+
+msgid "Despesas por categoria"
+msgstr ""
+
+msgid "Edit"
+msgstr ""
+
+msgid "Edit Account"
+msgstr ""
+
+msgid "Edit Goal"
+msgstr ""
+
+msgid "Email Address"
+msgstr ""
+
+msgid "English"
+msgstr ""
+
+msgid ""
+"Enter positive values; the type determines whether it is an expense or "
+"income."
+msgstr ""
+
+msgid "Enter your email to receive a magic login link"
+msgstr ""
+
+msgid "Error - Luro"
+msgstr ""
+
+msgid "Evolução mensal"
+msgstr ""
+
+msgid "Expense"
+msgstr ""
+
+msgid "Financial Goals"
+msgstr ""
+
+msgid "Generate/Refresh"
+msgstr ""
+
+msgid "Go to import"
+msgstr ""
+
+msgid "Goal Name"
+msgstr ""
+
+msgid "Goals"
+msgstr ""
+
+msgid "Goals - Luro"
+msgstr ""
+
+msgid "Import CSV/OFX"
+msgstr ""
+
+msgid "Import transactions"
+msgstr ""
+
+msgid "In Progress"
+msgstr ""
+
+msgid "Income"
+msgstr ""
+
+msgid "Initial Balance"
+msgstr ""
+
+msgid "Insight do mês"
+msgstr ""
+
+msgid "Insights gerados por IA. Revise antes de tomar decisões financeiras."
+msgstr ""
+
+msgid "Invalid balance format"
+msgstr ""
+
+msgid "Investment"
+msgstr ""
+
+msgid "Light mode"
+msgstr ""
+
+msgid "Login"
+msgstr ""
+
+msgid "Login - Luro"
+msgstr ""
+
+msgid "Login Now"
+msgstr ""
+
+msgid "Login to Luro"
+msgstr ""
+
+msgid "Logout"
+msgstr ""
+
+msgid "Luro - Personal Finance Manager"
+msgstr ""
+
+msgid "Magic Link Sent - Luro"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "No transactions yet"
+msgstr ""
+
+msgid "Olá, %(username)s!"
+msgstr ""
+
+msgid "Optional description"
+msgstr ""
+
+msgid ""
+"Organize your balances by connecting bank accounts or wallets you track "
+"manually."
+msgstr ""
+
+msgid "Other"
+msgstr ""
+
+msgid "Personal Finance Management"
+msgstr ""
+
+msgid "Português (Brasil)"
+msgstr ""
+
+msgid "Reference month"
+msgstr ""
+
+msgid "Register your first account"
+msgstr ""
+
+msgid "Resumo do mês"
+msgstr ""
+
+msgid "Saldos por conta"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save failed"
+msgstr ""
+
+msgid "Savings"
+msgstr ""
+
+msgid "Select an account"
+msgstr ""
+
+msgid "Send Magic Link"
+msgstr ""
+
+msgid "Since you\\'re in debug mode, here\\'s your magic link:"
+msgstr ""
+
+msgid "Target Amount"
+msgstr ""
+
+msgid "Target Date (Optional)"
+msgstr ""
+
+msgid "Target: %(date)s"
+msgstr ""
+
+msgid "Transactions"
+msgstr ""
+
+msgid "Transactions - Luro"
+msgstr ""
+
+msgid "Try Again"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Unable to save account: "
+msgstr ""
+
+msgid "We\\'ll send you a secure login link via email. No password needed!"
+msgstr ""
+
+msgid "We\\'ve sent a magic login link to"
+msgstr ""
+
+msgid "e.g., Emergency Fund"
+msgstr ""
+
+msgid "e.g., Groceries, Salary"
+msgstr ""
+
+msgid "e.g., Main Checking"
+msgstr ""
+
+msgid "your@email.com"
+msgstr ""
+
+msgid "← Back to login"
+msgstr ""
+
+msgid "⚠️ Authentication Error"
+msgstr ""
+
+msgid "✉️ Check Your Email"
+msgstr ""
+
+msgid "Account Management"
+msgstr ""
+
+msgid "Features"
+msgstr ""
+
+msgid "Get Started"
+msgstr ""
+
+msgid "Get personalized insights about your spending and saving habits."
+msgstr ""
+
+msgid "Insights"
+msgstr ""
+
+msgid ""
+"No goals yet. Create your first goal to start tracking your financial "
+"objectives!"
+msgstr ""
+
+msgid "Record and categorize all your income and expenses manually."
+msgstr ""
+
+msgid "Select account"
+msgstr ""
+
+msgid "Set and track progress towards your financial objectives."
+msgstr ""
+
+msgid "Track multiple accounts and monitor your balances in real-time."
+msgstr ""
+
+msgid ""
+"Track your accounts, manage transactions, and achieve your financial goals."
+msgstr ""
+
+msgid "Transaction Tracking"
+msgstr ""
+
+msgid "Welcome to Luro"
+msgstr ""
+
+msgid "Your personal finance management solution"
+msgstr ""
+
+msgid "Invalid amount"
+msgstr ""
+
+msgid "Processing..."
+msgstr ""
+
+msgid "Transaction updated"
+msgstr ""
+
+msgid "Unable to contribute to goal: "
+msgstr ""
+
+msgid "Unable to save transaction: "
+msgstr ""
+
+msgid "✓ Completed"
+msgstr ""

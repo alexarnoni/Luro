@@ -1,43 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}Accounts - Luro{% endblock %}
+{% block title %}{{ _('Contas - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>Accounts</h1>
+    <h1>{{ _('Contas') }}</h1>
     <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">
-        + Add Account
+    + {{ _('Adicionar conta') }}
     </button>
+    <div class="lang-switch" style="display:inline-block; margin-left:0.75rem;">
+        <a href="/set-lang?lang=pt_BR" class="btn btn-sm btn-outline-secondary" title="{{ _('Português (Brasil)') }}">PT</a>
+        <a href="/set-lang?lang=en" class="btn btn-sm btn-outline-secondary" title="{{ _('English') }}">EN</a>
+    </div>
 </div>
 
 <section id="account-form" class="form-card" hidden aria-hidden="true">
-    <h2>Add New Account</h2>
+    <h2>{{ _('Adicionar nova conta') }}</h2>
     <form method="post" action="/accounts">
         <div class="form-group">
-            <label for="name">Account Name</label>
-            <input type="text" id="name" name="name" required class="form-control" placeholder="e.g., Main Checking" aria-describedby="name-help">
+            <label for="name">{{ _('Account Name') }}</label>
+            <input type="text" id="name" name="name" required class="form-control" placeholder="{{ _('e.g., Main Checking') }}" aria-describedby="name-help">
             <span class="form-hint" id="name-help">Use um nome fácil de identificar, como "Conta corrente".</span>
         </div>
 
         <div class="form-group">
-            <label for="account_type">Account Type</label>
+            <label for="account_type">{{ _('Account Type') }}</label>
             <select id="account_type" name="account_type" required class="form-control">
-                <option value="checking">Checking</option>
-                <option value="savings">Savings</option>
-                <option value="credit">Credit Card</option>
-                <option value="investment">Investment</option>
-                <option value="other">Other</option>
+                <option value="checking">{{ _('Checking') }}</option>
+                <option value="savings">{{ _('Savings') }}</option>
+                <option value="credit">{{ _('Cartão de crédito') }}</option>
+                <option value="investment">{{ _('Investment') }}</option>
+                <option value="other">{{ _('Other') }}</option>
             </select>
         </div>
         
         <div class="form-group">
-            <label for="balance">Initial Balance</label>
+            <label for="balance">{{ _('Saldo inicial') }}</label>
             <input type="number" id="balance" name="balance" step="0.01" value="0" class="form-control">
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Create Account</button>
-            <button type="button" class="btn btn-secondary" data-close-target="#account-form">Cancel</button>
+            <button type="submit" class="btn btn-primary">{{ _('Criar conta') }}</button>
+            <button type="button" class="btn btn-secondary" data-close-target="#account-form">{{ _('Cancelar') }}</button>
         </div>
     </form>
 </section>
@@ -45,10 +49,32 @@
 <div class="accounts-grid">
     {% if accounts %}
         {% for account in accounts %}
-        <div class="account-card">
-            <h3>{{ account.name }}</h3>
+        <div class="account-card" data-account-row="{{ account.id }}">
+            <h3 class="account-name">{{ account.name }}</h3>
             <p class="account-type">{{ account.account_type|title }}</p>
-            <p class="account-balance">${{ "%.2f"|format(account.balance) }}</p>
+            <p class="account-balance" data-account-id="{{ account.id }}">R$ {{ "%.2f"|format(account.balance) }}</p>
+            <div class="account-actions">
+                <button type="button" class="btn btn-ghost" data-toggle-target="#account-edit-{{ account.id }}">{{ _('Editar') }}</button>
+                <button type="button" class="btn btn-danger" data-delete-account="{{ account.id }}">{{ _('Excluir') }}</button>
+            </div>
+
+            <section id="account-edit-{{ account.id }}" class="form-card" hidden aria-hidden="true">
+                <h4>{{ _('Editar conta') }}</h4>
+                <form action="/accounts/{{ account.id }}/edit" method="post" class="account-edit-form-ajax" data-account-id="{{ account.id }}">
+                    <div class="form-group">
+                        <label for="account-name-{{ account.id }}">{{ _('Name') }}</label>
+                        <input id="account-name-{{ account.id }}" name="name" class="form-control" required value="{{ account.name }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="account-balance-{{ account.id }}">{{ _('Saldo') }}</label>
+                        <input id="account-balance-{{ account.id }}" name="balance" class="form-control" required value="{{ '%.2f'|format(account.balance) }}">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">{{ _('Salvar') }}</button>
+                        <button type="button" class="btn btn-secondary" data-close-target="#account-edit-{{ account.id }}">{{ _('Cancelar') }}</button>
+                    </div>
+                </form>
+            </section>
         </div>
         {% endfor %}
     {% else %}
@@ -56,16 +82,18 @@
             <span class="empty-state__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false" role="presentation"><path d="M20 7h-4.18C15.4 5.84 14.3 5 13 5h-2c-1.3 0-2.4.84-2.82 2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Zm-8-1h2a1 1 0 0 1 .92.6L15.38 7H8.62l.46-1.4A1 1 0 0 1 12 6Zm8 11H4V9h16v8Zm-9-5h2v2h2v2h-2v2h-2v-2H9v-2h2v-2Z"/></svg>
             </span>
-            <h2 class="empty-state__title">Cadastre sua primeira conta</h2>
-            <p class="empty-state__description">Organize seus saldos conectando contas bancárias ou carteiras que você acompanha manualmente.</p>
+            <h2 class="empty-state__title">{{ _('Registre sua primeira conta') }}</h2>
+            <p class="empty-state__description">{{ _('Organize seus saldos conectando contas bancárias ou carteiras que você acompanha manualmente.') }}</p>
             <div class="empty-state__actions">
-                <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">Criar conta</button>
-                <a class="btn btn-ghost" href="/transactions" aria-label="Ir para importação de extratos">Importar CSV/OFX</a>
+                <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">{{ _('Criar conta') }}</button>
+                <a class="btn btn-ghost" href="/transactions" aria-label="{{ _('Ir para importar') }}">{{ _('Importar CSV/OFX') }}</a>
             </div>
         </div>
     {% endif %}
 </div>
 {% block extra_js %}
 <script src="/static/js/ui.js" defer></script>
+<script src="/static/js/toast.js" defer></script>
+<script src="/static/js/accounts.js" defer></script>
 {% endblock %}
 {% endblock %}

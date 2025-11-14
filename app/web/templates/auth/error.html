@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Error - Luro{% endblock %}
+{% block title %}{{ _('Error - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="auth-container">
     <div class="auth-card">
-        <h1>⚠️ Authentication Error</h1>
-        <p class="error-message">{{ error }}</p>
+    <h1>{{ _('⚠️ Authentication Error') }}</h1>
+    <p class="error-message">{{ error }}</p>
         
         <div class="auth-footer">
-            <a href="/login" class="btn btn-primary">Try Again</a>
+            <a href="/login" class="btn btn-primary">{{ _('Tentar novamente') }}</a>
         </div>
     </div>
 </div>

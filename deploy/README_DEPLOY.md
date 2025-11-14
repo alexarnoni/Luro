@@ -49,3 +49,38 @@ Este documento descreve os passos recomendados para implantar o Luro em um servi
    - Execute `scripts/check_deploy.py` para validar o ambiente.
 
 > Observação: adapte os caminhos e usuários conforme a política da sua infraestrutura.
+
+   ## Deploy com Docker Compose (recomendado para a VM)
+
+   Se preferir construir e rodar a aplicação via Docker Compose na VM (opção escolhida), siga estes passos na VM:
+
+   1. Instale o Docker e o Docker Compose (ex.: `docker-ce` e `docker-compose-plugin`).
+
+   2. Copie o projeto para a VM e crie o arquivo `.env` a partir de `.env.example`:
+   ```bash
+   cp .env.example .env
+   # editar .env e preencher SECRET_KEY, POSTGRES_PASSWORD, RESEND_API_KEY, etc.
+   ```
+
+   3. Opções:
+   - Usar `docker-compose.prod.yml` presente na raiz: ele cria a imagem localmente e levanta um serviço `db` (Postgres).
+
+   4. Build & start:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+   5. Executar migrações (uma vez):
+   ```bash
+   docker compose -f docker-compose.prod.yml run --rm web alembic upgrade head
+   ```
+
+   6. Verificar logs e status:
+   ```bash
+   docker compose -f docker-compose.prod.yml ps
+   docker compose -f docker-compose.prod.yml logs -f web
+   ```
+
+   7. Configurar Nginx (opcional) para servir `static/` e proxy_pass para `http://127.0.0.1:8000` (ex.: `deploy/luro.nginx.conf`).
+
+   Para SSL, use Certbot ou sua solução de certificados (Cloudflare, etc.).

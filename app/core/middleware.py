@@ -25,11 +25,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         response = await call_next(request)
 
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; "
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data:",
-        )
+        # Build a CSP that is permissive for development (allows inline scripts
+        # and connect to jsdelivr for source map lookups), but keeps stricter
+        # defaults in production. The header value must be a single string.
+        if settings.ENV.lower() == "development":
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "connect-src 'self' https://cdn.jsdelivr.net;"
+            )
+        else:
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "connect-src 'self';"
+            )
+
+        response.headers.setdefault("Content-Security-Policy", csp)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault(
