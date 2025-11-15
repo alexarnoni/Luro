@@ -39,9 +39,9 @@ def _sync_url_from_env() -> str:
     Converte a DATABASE_URL assíncrona para uma URL síncrona
     apenas para as migrações do Alembic.
     """
-    db_url = os.getenv("DATABASE_URL", "")
+    db_url = os.getenv("DATABASE_URL")
     if not db_url:
-        return ""
+        raise RuntimeError("DATABASE_URL não está definido nas envs dentro do container.")
     url = make_url(db_url)
 
     # Trocar drivers async por sync equivalentes
@@ -51,16 +51,14 @@ def _sync_url_from_env() -> str:
         url = url.set(drivername="postgresql+psycopg2")
     # acrescente outros mapeamentos se usar MySQL async, etc.
 
-    return str(url)
+    return url.render_as_string(hide_password=False)
 
 
 def _configure_sqlalchemy_url():
     """
     Injeta a URL convertida (síncrona) no config do Alembic.
     """
-    sync_url = _sync_url_from_env()
-    if sync_url:
-        config.set_main_option("sqlalchemy.url", sync_url)
+    config.set_main_option("sqlalchemy.url", _sync_url_from_env())
 
 
 # ------------------------------------------
