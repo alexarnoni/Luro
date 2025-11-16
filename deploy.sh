@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-cd /opt/luro
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 echo "🔄 Pull do repositório..."
 git pull origin main

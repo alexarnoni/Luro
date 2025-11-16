@@ -7,11 +7,13 @@ services:
     restart: always
     env_file:
       - .env
-    ports:
-      - "8000:8000"
     depends_on:
       - db
+    ports:
+      - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+
+    # Importante: não bindar o projeto inteiro, só os estáticos
     volumes:
       - ./app/web/static:/app/app/web/static:ro
 
@@ -21,6 +23,8 @@ services:
     environment:
       POSTGRES_DB: luro
       POSTGRES_USER: luro
+      # Esse valor só é usado se você recriar o volume do banco do zero.
+      # Enquanto o volume atual existir, ele ignora e usa o que já foi inicializado.
       POSTGRES_PASSWORD: change-me
     volumes:
       - luro-db:/var/lib/postgresql/data
