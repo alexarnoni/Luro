@@ -12,22 +12,22 @@
     <h2>{{ _('Adicionar nova meta') }}</h2>
     <form method="post" action="/goals">
         <div class="form-group">
-            <label for="name">{{ _('Goal Name') }}</label>
-            <input type="text" id="name" name="name" required class="form-control" placeholder="{{ _('e.g., Emergency Fund') }}">
+            <label for="name">{{ _('Nome da meta') }}</label>
+            <input type="text" id="name" name="name" required class="form-control" placeholder="{{ _('ex.: Fundo de emergência') }}">
         </div>
         
         <div class="form-group">
-            <label for="description">{{ _('Description') }}</label>
-            <textarea id="description" name="description" class="form-control" rows="3" placeholder="{{ _('Optional description') }}"></textarea>
+            <label for="description">{{ _('Descrição') }}</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="{{ _('Descrição (opcional)') }}"></textarea>
         </div>
         
         <div class="form-group">
-            <label for="target_amount">{{ _('Target Amount') }}</label>
+            <label for="target_amount">{{ _('Valor alvo') }}</label>
             <input type="number" id="target_amount" name="target_amount" step="0.01" required class="form-control" placeholder="0.00">
         </div>
         
         <div class="form-group">
-            <label for="target_date">{{ _('Target Date (Optional)') }}</label>
+            <label for="target_date">{{ _('Data alvo (opcional)') }}</label>
             <input type="date" id="target_date" name="target_date" class="form-control">
         </div>
         
@@ -49,7 +49,8 @@
             
             <div class="goal-progress">
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ (goal.current_amount / goal.target_amount * 100)|round }}%"></div>
+                    {# Protect against division by zero or null target_amount #}
+                    <div class="progress-fill" style="width: {{ ((goal.current_amount / goal.target_amount * 100)|round) if goal.target_amount else 0 }}%"></div>
                 </div>
                 <div class="progress-details">
                     <span>R$ {{ "%.2f"|format(goal.current_amount) }}</span>
@@ -58,13 +59,13 @@
             </div>
             
             {% if goal.target_date %}
-            <p class="goal-date">{{ _('Target: %(date)s') % {'date': goal.target_date.strftime('%Y-%m-%d')} }}</p>
+            <p class="goal-date">{{ _('Prazo: %(date)s') % {'date': goal.target_date.strftime('%Y-%m-%d')} }}</p>
             {% endif %}
             
             {% if goal.is_completed %}
-            <span class="badge badge-success">✓ {{ _('Completed') }}</span>
+            <span class="badge badge-success">✓ {{ _('Concluída') }}</span>
             {% else %}
-            <span class="badge badge-info">{{ _('In Progress') }}</span>
+            <span class="badge badge-info">{{ _('Em andamento') }}</span>
             <div class="goal-actions">
                 <button type="button" class="btn btn-ghost" data-toggle-target="#goal-form-{{ goal.id }}" data-toggle-focus="#goal-name-{{ goal.id }}">{{ _('Editar') }}</button>
             </div>
@@ -72,19 +73,19 @@
                 <h3>{{ _('Editar meta') }}</h3>
                 <form method="post" action="/goals/{{ goal.id }}">
                     <div class="form-group">
-                        <label for="goal-name-{{ goal.id }}">{{ _('Goal Name') }}</label>
+                        <label for="goal-name-{{ goal.id }}">{{ _('Nome da meta') }}</label>
                         <input type="text" id="goal-name-{{ goal.id }}" name="name" required class="form-control" value="{{ goal.name }}">
                     </div>
                     <div class="form-group">
-                        <label for="goal-description-{{ goal.id }}">{{ _('Description') }}</label>
+                        <label for="goal-description-{{ goal.id }}">{{ _('Descrição') }}</label>
                         <textarea id="goal-description-{{ goal.id }}" name="description" class="form-control" rows="2">{{ goal.description or '' }}</textarea>
                     </div>
                     <div class="form-group">
-                        <label for="goal-target-{{ goal.id }}">{{ _('Target Amount') }}</label>
+                        <label for="goal-target-{{ goal.id }}">{{ _('Valor alvo') }}</label>
                         <input type="number" id="goal-target-{{ goal.id }}" name="target_amount" step="0.01" required class="form-control" value="{{ '%.2f'|format(goal.target_amount) }}">
                     </div>
                     <div class="form-group">
-                        <label for="goal-date-{{ goal.id }}">{{ _('Target Date (Optional)') }}</label>
+                        <label for="goal-date-{{ goal.id }}">{{ _('Data alvo (opcional)') }}</label>
                         <input type="date" id="goal-date-{{ goal.id }}" name="target_date" class="form-control" value="{{ goal.target_date.strftime('%Y-%m-%d') if goal.target_date else '' }}">
                     </div>
                     <div class="form-actions">
@@ -99,12 +100,12 @@
                 <form class="goal-contribute-form" data-goal-id="{{ goal.id }}" method="post" action="/goals/{{ goal.id }}/contribute">
                     <div class="form-row" style="display:flex; gap:8px; align-items:center; margin-top:0.75rem;">
                         <select name="account_id" required class="form-control" style="flex:1;">
-                            <option value="">{{ _('Select account') }}</option>
+                            <option value="">{{ _('Selecione a conta') }}</option>
                             {% for account in accounts %}
                             <option value="{{ account.id }}">{{ account.name }} — {{ '%.2f'|format(account.balance) }}</option>
                             {% endfor %}
                         </select>
-                        <input type="number" name="amount" step="0.01" min="0.01" required placeholder="{{ _('Amount') }}" class="form-control" style="width:120px;">
+                        <input type="number" name="amount" step="0.01" min="0.01" required placeholder="{{ _('Valor') }}" class="form-control" style="width:120px;">
                         <button type="submit" class="btn btn-primary">{{ _('Contribuir') }}</button>
                     </div>
                 </form>

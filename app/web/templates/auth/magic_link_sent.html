@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Magic Link Sent - Luro') }}{% endblock %}
+{% block title %}{{ _('Link mágico enviado - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="auth-container">
     <div class="auth-card">
-    <h1>{{ _('✉️ Check Your Email') }}</h1>
+    <h1>{{ _('✉️ Verifique seu e-mail') }}</h1>
     <p>{{ _('Enviamos um link de login para') }} <strong>{{ email }}</strong></p>
     <p>{{ _('Clique no link no e-mail para entrar. O link expira em 15 minutos.') }}</p>
         
         {% if debug and magic_link %}
         <div class="debug-section">
-            <h3>{{ _('Debug Mode') }}</h3>
-            <p>{{ _('Since you\'re in debug mode, here\'s your magic link:') }}</p>
+            <h3>{{ _('Modo de depuração') }}</h3>
+            <p>{{ _('Como você está em modo de depuração, aqui está seu link mágico:') }}</p>
             <a href="{{ magic_link }}" class="btn btn-primary">{{ _('Entrar agora') }}</a>
         </div>
         {% endif %}

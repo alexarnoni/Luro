@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ _('Luro - Personal Finance Manager') }}{% endblock %}</title>
+    <title>{% block title %}{{ _('Luro - Gerenciador Financeiro Pessoal') }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css">
     {% block extra_css %}{% endblock %}
 </head>
@@ -24,11 +24,7 @@
                 <li><a href="/login">{{ _('Entrar') }}</a></li>
             </ul>
             {% endif %}
-            <div class="lang-toggle" aria-hidden="false">
-                <a href="/set-lang?lang=pt">PT</a>
-                &nbsp;|&nbsp;
-                <a href="/set-lang?lang=en">EN</a>
-            </div>
+            
             <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Alternar para tema escuro">
                 <span class="theme-toggle__icon" aria-hidden="true">
                     <svg class="theme-toggle__sun" viewBox="0 0 24 24" role="presentation" focusable="false">
@@ -38,7 +34,7 @@
                         <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79Z" />
                     </svg>
                 </span>
-                <span class="theme-toggle__label" data-theme-toggle-text>{{ _('Light mode') }}</span>
+                <span class="theme-toggle__label" data-theme-toggle-text>{{ _('Modo claro') }}</span>
             </button>
         </div>
     </nav>

@@ -18,19 +18,19 @@
     <h2>{{ _('Adicionar nova conta') }}</h2>
     <form method="post" action="/accounts">
         <div class="form-group">
-            <label for="name">{{ _('Account Name') }}</label>
-            <input type="text" id="name" name="name" required class="form-control" placeholder="{{ _('e.g., Main Checking') }}" aria-describedby="name-help">
+            <label for="name">{{ _('Nome da conta') }}</label>
+            <input type="text" id="name" name="name" required class="form-control" placeholder="{{ _('ex.: Conta corrente principal') }}" aria-describedby="name-help">
             <span class="form-hint" id="name-help">Use um nome fácil de identificar, como "Conta corrente".</span>
         </div>
 
         <div class="form-group">
-            <label for="account_type">{{ _('Account Type') }}</label>
+            <label for="account_type">{{ _('Tipo de conta') }}</label>
             <select id="account_type" name="account_type" required class="form-control">
-                <option value="checking">{{ _('Checking') }}</option>
-                <option value="savings">{{ _('Savings') }}</option>
+                <option value="checking">{{ _('Conta corrente') }}</option>
+                <option value="savings">{{ _('Poupança') }}</option>
                 <option value="credit">{{ _('Cartão de crédito') }}</option>
-                <option value="investment">{{ _('Investment') }}</option>
-                <option value="other">{{ _('Other') }}</option>
+                <option value="investment">{{ _('Investimento') }}</option>
+                <option value="other">{{ _('Outro') }}</option>
             </select>
         </div>
         
@@ -51,7 +51,7 @@
         {% for account in accounts %}
         <div class="account-card" data-account-row="{{ account.id }}">
             <h3 class="account-name">{{ account.name }}</h3>
-            <p class="account-type">{{ account.account_type|title }}</p>
+            <p class="account-type">{{ {'checking': _('Conta corrente'), 'savings': _('Poupança'), 'credit': _('Cartão de crédito'), 'investment': _('Investimento'), 'other': _('Outro')}.get(account.account_type, account.account_type|title) }}</p>
             <p class="account-balance" data-account-id="{{ account.id }}">R$ {{ "%.2f"|format(account.balance) }}</p>
             <div class="account-actions">
                 <button type="button" class="btn btn-ghost" data-toggle-target="#account-edit-{{ account.id }}">{{ _('Editar') }}</button>
@@ -62,7 +62,7 @@
                 <h4>{{ _('Editar conta') }}</h4>
                 <form action="/accounts/{{ account.id }}/edit" method="post" class="account-edit-form-ajax" data-account-id="{{ account.id }}">
                     <div class="form-group">
-                        <label for="account-name-{{ account.id }}">{{ _('Name') }}</label>
+                        <label for="account-name-{{ account.id }}">{{ _('Nome') }}</label>
                         <input id="account-name-{{ account.id }}" name="name" class="form-control" required value="{{ account.name }}">
                     </div>
                     <div class="form-group">

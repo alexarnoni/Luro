@@ -14,43 +14,43 @@
     <h2>{{ _('Adicionar nova transação') }}</h2>
     <form method="post" action="/transactions">
         <div class="form-group">
-            <label for="account_id">{{ _('Account') }}</label>
+            <label for="account_id">{{ _('Conta') }}</label>
             <select id="account_id" name="account_id" required class="form-control" aria-describedby="account-help">
-                <option value="">{{ _('Select an account') }}</option>
+                <option value="">{{ _('Selecione uma conta') }}</option>
                 {% for account in accounts %}
                 <option value="{{ account.id }}">{{ account.name }}</option>
                 {% endfor %}
             </select>
-            <span class="form-hint" id="account-help">Escolha a conta onde o lançamento será registrado.</span>
+            <span class="form-hint" id="account-help">{{ _('Escolha a conta onde o lançamento será registrado.') }}</span>
         </div>
 
         <div class="form-group">
-            <label for="transaction_type">{{ _('Type') }}</label>
+            <label for="transaction_type">{{ _('Tipo') }}</label>
             <select id="transaction_type" name="transaction_type" required class="form-control">
-                <option value="income">{{ _('Income') }}</option>
-                <option value="expense">{{ _('Expense') }}</option>
+                <option value="income">{{ _('Receita') }}</option>
+                <option value="expense">{{ _('Despesa') }}</option>
             </select>
         </div>
         
         <div class="form-group">
-            <label for="amount">{{ _('Amount') }}</label>
+            <label for="amount">{{ _('Valor') }}</label>
             <input type="number" id="amount" name="amount" step="0.01" min="0" required class="form-control" placeholder="0.00" aria-describedby="amount-help">
-            <span class="form-hint" id="amount-help">{{ _('Enter positive values; the type determines whether it is an expense or income.') }}</span>
+            <span class="form-hint" id="amount-help">{{ _('Insira valores positivos; o tipo determina se é despesa ou receita.') }}</span>
         </div>
 
         <div class="form-group">
-            <label for="category">{{ _('Category') }}</label>
-            <input type="text" id="category" name="category" class="form-control" placeholder="{{ _('e.g., Groceries, Salary') }}" aria-describedby="category-help">
+            <label for="category">{{ _('Categoria') }}</label>
+            <input type="text" id="category" name="category" class="form-control" placeholder="{{ _('ex.: Supermercado, Salário') }}" aria-describedby="category-help">
             <span class="form-hint" id="category-help">{{ _('Categorias ajudam a entender seus gastos. Você pode adicioná-las depois.') }}</span>
         </div>
         
         <div class="form-group">
-            <label for="description">{{ _('Description') }}</label>
-            <input type="text" id="description" name="description" class="form-control" placeholder="{{ _('Optional description') }}">
+            <label for="description">{{ _('Descrição') }}</label>
+            <input type="text" id="description" name="description" class="form-control" placeholder="{{ _('Descrição (opcional)') }}">
         </div>
         
         <div class="form-group">
-            <label for="transaction_date">{{ _('Date') }}</label>
+            <label for="transaction_date">{{ _('Data') }}</label>
             <input type="datetime-local" id="transaction_date" name="transaction_date" class="form-control">
         </div>
         
@@ -66,13 +66,13 @@
     <table>
         <thead>
             <tr>
-                <th>{{ _('Date') }}</th>
-                <th>{{ _('Account') }}</th>
-                <th>{{ _('Type') }}</th>
-                <th>{{ _('Category') }}</th>
-                <th>{{ _('Description') }}</th>
-                <th>{{ _('Amount') }}</th>
-                <th>{{ _('Actions') }}</th>
+                <th>{{ _('Data') }}</th>
+                <th>{{ _('Conta') }}</th>
+                <th>{{ _('Tipo') }}</th>
+                <th>{{ _('Categoria') }}</th>
+                <th>{{ _('Descrição') }}</th>
+                <th>{{ _('Valor') }}</th>
+                <th>{{ _('Ações') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -80,7 +80,11 @@
             <tr data-txn-row="{{ transaction.id }}">
                 <td>{{ transaction.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ transaction.account.name }}</td>
-                <td><span class="badge badge-{{ transaction.transaction_type }}">{{ transaction.transaction_type|title }}</span></td>
+                                <td>
+                                    <span class="badge badge-{{ transaction.transaction_type }}">
+                                        {% if transaction.transaction_type == 'income' %}{{ _('Receita') }}{% else %}{{ _('Despesa') }}{% endif %}
+                                    </span>
+                                </td>
                 <td>{{ transaction.category or '-' }}</td>
                 <td class="txn-desc">{{ transaction.description or '-' }}</td>
                 <td class="txn-amount {% if transaction.transaction_type == 'income' %}positive{% else %}negative{% endif %}">
@@ -95,11 +99,11 @@
                 <td colspan="7">
                     <form action="/transactions/{{ transaction.id }}/edit" method="post" class="txn-edit-form-ajax" data-txn-id="{{ transaction.id }}">
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <input name="description" class="form-control" value="{{ transaction.description or '' }}" placeholder="{{ _('Description') }}">
-                            <input name="amount" class="form-control" value="{{ '%.2f'|format(transaction.amount) }}" placeholder="{{ _('Amount') }}">
+                            <input name="description" class="form-control" value="{{ transaction.description or '' }}" placeholder="{{ _('Descrição') }}">
+                            <input name="amount" class="form-control" value="{{ '%.2f'|format(transaction.amount) }}" placeholder="{{ _('Valor') }}">
                             <select name="transaction_type" class="form-control">
-                                    <option value="income" {% if transaction.transaction_type=='income' %}selected{% endif %}>{{ _('Income') }}</option>
-                                    <option value="expense" {% if transaction.transaction_type=='expense' %}selected{% endif %}>{{ _('Expense') }}</option>
+                                    <option value="income" {% if transaction.transaction_type=='income' %}selected{% endif %}>{{ _('Receita') }}</option>
+                                    <option value="expense" {% if transaction.transaction_type=='expense' %}selected{% endif %}>{{ _('Despesa') }}</option>
                             </select>
                             <button type="submit" class="btn btn-primary">{{ _('Salvar') }}</button>
                             <button type="button" class="btn btn-secondary" data-close-target="#txn-edit-{{ transaction.id }}">{{ _('Cancelar') }}</button>
