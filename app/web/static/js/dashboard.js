@@ -215,8 +215,10 @@
         setInsightLoading(true);
 
         try {
-            const response = await fetch(`/api/insights/generate?month=${encodeURIComponent(monthValue)}`, {
+            const safeFetch = (window.luroSecurity && window.luroSecurity.fetch) || fetch;
+            const response = await safeFetch(`/api/insights/generate?month=${encodeURIComponent(monthValue)}`, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
                     'Content-Type': 'application/json'
