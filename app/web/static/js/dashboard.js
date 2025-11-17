@@ -719,6 +719,7 @@
         const deleteModal = document.getElementById('delete-account-modal');
         const deleteForm = document.getElementById('delete-account-form');
         const deleteButton = document.querySelector('[data-delete-account]');
+        const cancelButton = deleteModal ? deleteModal.querySelector('[data-close-target="#delete-account-modal"]') : null;
         if (!deleteModal || !deleteForm || !deleteButton) return;
 
         deleteButton.addEventListener('click', (event) => {
@@ -743,6 +744,23 @@
             if (event.target === deleteModal) {
                 deleteModal.setAttribute('hidden', '');
                 deleteModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+
+        if (cancelButton) {
+            cancelButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                deleteModal.setAttribute('hidden', '');
+                deleteModal.setAttribute('aria-hidden', 'true');
+                deleteButton.focus();
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !deleteModal.hasAttribute('hidden')) {
+                deleteModal.setAttribute('hidden', '');
+                deleteModal.setAttribute('aria-hidden', 'true');
+                deleteButton.focus();
             }
         });
     }

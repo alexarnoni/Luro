@@ -955,6 +955,12 @@ html.dark .empty-state__icon {
     margin: 0;
 }
 
+.beta-badge {
+    margin: 0.35rem 0;
+    font-weight: 600;
+    color: var(--color-footer-text);
+}
+
 .footer-links {
     margin-top: 0.5rem;
     display: flex;
