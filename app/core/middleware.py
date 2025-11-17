@@ -76,17 +76,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if settings.ENV.lower() == "development":
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
+                "frame-src 'self' https://challenges.cloudflare.com; "
                 "connect-src 'self' https://cdn.jsdelivr.net;"
             )
         else:
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' https://cdn.jsdelivr.net; "
+                "script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
+                "frame-src 'self' https://challenges.cloudflare.com; "
                 "connect-src 'self';"
             )
 
