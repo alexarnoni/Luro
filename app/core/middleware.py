@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import secrets
+import time
 from typing import Callable, Awaitable
 
 from fastapi import Request, Response
@@ -14,6 +16,49 @@ from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.csrf import SAFE_METHODS, csrf_manager
 
 logger = logging.getLogger(__name__)
+
+
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    """Attach request context (id, timing) and log a compact access line."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        super().__init__(app)
+        self._skip_prefixes = ("/static", "/health")
+
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        request_id = request.headers.get("X-Request-ID") or secrets.token_hex(8)
+        request.state.request_id = request_id
+        path = request.url.path
+        start_time = time.perf_counter()
+
+        try:
+            response = await call_next(request)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Unhandled error for %s %s [request_id=%s]",
+                request.method,
+                path,
+                request_id,
+            )
+            raise
+
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        response.headers.setdefault("X-Request-ID", request_id)
+
+        if not path.startswith(self._skip_prefixes):
+            status = getattr(response, "status_code", "unknown")
+            client = request.client.host if request.client else "unknown"
+            logger.info(
+                "Handled %s %s -> %s in %.1fms (client=%s) [request_id=%s]",
+                request.method,
+                path,
+                status,
+                duration_ms,
+                client,
+                request_id,
+            )
+
+        return response
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -98,4 +143,4 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-__all__ = ["CSRFMiddleware", "SecurityHeadersMiddleware"]
+__all__ = ["CSRFMiddleware", "RequestContextMiddleware", "SecurityHeadersMiddleware"]

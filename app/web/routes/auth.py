@@ -1,11 +1,13 @@
 import hashlib
 import logging
+from datetime import datetime, timedelta
 
+import httpx
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 import resend
 
 from app.core.config import settings
@@ -13,6 +15,7 @@ from app.core.cookies import SESSION_COOKIE_NAME, clear_session_cookie, set_sess
 from app.core.database import get_db
 from app.core.rate_limit import rate_limiter
 from app.core.security import magic_link_manager
+from app.domain.security.models import LoginRequest
 from app.domain.users.models import User
 from app.core import i18n
 
@@ -21,8 +24,105 @@ templates = Jinja2Templates(directory="app/web/templates")
 templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
 templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
 templates.env.globals.setdefault("_", i18n.gettext_proxy)
+templates.env.globals.setdefault("TURNSTILE_SITE_KEY", settings.TURNSTILE_SITE_KEY)
+templates.env.globals.setdefault("ENABLE_SECURITY_HARDENING", settings.ENABLE_SECURITY_HARDENING)
 
 logger = logging.getLogger(__name__)
+security_logger = logging.getLogger("app.security")
+
+
+async def _validate_turnstile(token: str | None, client_host: str) -> None:
+    """Validate Cloudflare Turnstile token when hardening is enabled."""
+    if not settings.ENABLE_SECURITY_HARDENING:
+        return
+
+    if not settings.TURNSTILE_SECRET_KEY:
+        security_logger.error("Turnstile secret missing while hardening is enabled")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Login temporarily unavailable. Please try again later.",
+        )
+
+    if not token:
+        security_logger.warning("Missing Turnstile token for login [client=%s]", client_host)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Captcha validation failed. Please refresh and try again.",
+        )
+
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.post(
+                "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+                data={
+                    "secret": settings.TURNSTILE_SECRET_KEY,
+                    "response": token,
+                    "remoteip": client_host,
+                },
+            )
+        payload = response.json()
+        if not payload.get("success"):
+            security_logger.warning("Turnstile validation failed [client=%s]", client_host)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Captcha validation failed. Please try again.",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        security_logger.error("Turnstile validation error [client=%s]", client_host, exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Captcha service unavailable. Try again in a moment.",
+        )
+
+
+async def _enforce_login_rate_limits(
+    db: AsyncSession,
+    email: str,
+    client_host: str,
+) -> None:
+    """Apply per-IP and per-email rate limiting backed by the database."""
+    now = datetime.utcnow()
+    ip_window_start = now - timedelta(seconds=settings.LOGIN_RATE_LIMIT_IP_WINDOW_SECONDS)
+    email_window_start = now - timedelta(seconds=settings.LOGIN_RATE_LIMIT_EMAIL_WINDOW_SECONDS)
+
+    ip_count = await db.scalar(
+        select(func.count(LoginRequest.id)).where(
+            LoginRequest.ip == client_host,
+            LoginRequest.requested_at >= ip_window_start,
+        )
+    )
+    if ip_count and ip_count >= settings.LOGIN_RATE_LIMIT_IP_MAX:
+        hashed_ip = hashlib.sha256(client_host.encode()).hexdigest()[:12]
+        security_logger.warning("Login rate limit exceeded for IP [%s]", hashed_ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+        )
+
+    email_count = await db.scalar(
+        select(func.count(LoginRequest.id)).where(
+            LoginRequest.email == email,
+            LoginRequest.requested_at >= email_window_start,
+        )
+    )
+    if email_count and email_count >= settings.LOGIN_RATE_LIMIT_EMAIL_MAX:
+        hashed_email = hashlib.sha256(email.encode()).hexdigest()[:12]
+        security_logger.warning("Login rate limit exceeded for email [%s]", hashed_email)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts for this email. Please try again later.",
+        )
+
+    db.add(
+        LoginRequest(
+            email=email,
+            ip=client_host,
+            requested_at=now,
+        )
+    )
+    await db.commit()
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -35,29 +135,37 @@ async def login_page(request: Request):
 async def login(
     request: Request,
     email: str = Form(...),
+    turnstile_token: str | None = Form(None, alias="cf-turnstile-response"),
+    db: AsyncSession = Depends(get_db),
 ):
     """Send magic link to user's email."""
     client_host = request.client.host if request.client else "unknown"
-    rate_key = f"{client_host}:{email.lower()}"
-    allowed = await rate_limiter.is_allowed(
-        rate_key,
-        settings.RATE_LIMIT_MAX,
-        settings.RATE_LIMIT_WINDOW_SECONDS,
-    )
+    email_normalized = email.lower().strip()
+    rate_key = f"{client_host}:{email_normalized}"
 
-    if not allowed:
-        anonymised_key = hashlib.sha256(rate_key.encode()).hexdigest()[:12]
-        logger.warning("Login rate limit exceeded for identifier %s", anonymised_key)
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again later.",
+    if settings.ENABLE_SECURITY_HARDENING:
+        await _validate_turnstile(turnstile_token, client_host)
+        await _enforce_login_rate_limits(db, email_normalized, client_host)
+    else:
+        allowed = await rate_limiter.is_allowed(
+            rate_key,
+            settings.RATE_LIMIT_MAX,
+            settings.RATE_LIMIT_WINDOW_SECONDS,
         )
+        if not allowed:
+            anonymised_key = hashlib.sha256(rate_key.encode()).hexdigest()[:12]
+            logger.warning("Login rate limit exceeded for identifier %s", anonymised_key)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many login attempts. Please try again later.",
+            )
 
     # Generate magic link token
     token = magic_link_manager.generate_token(email)
 
     # Create magic link URL
     magic_link = f"{request.url_for('verify_magic_link')}?token={token}"
+    anonymised_user = hashlib.sha256(email.lower().encode()).hexdigest()[:12]
 
     # Send email with magic link using Resend
     if settings.RESEND_API_KEY:
@@ -100,6 +208,8 @@ async def login(
                 </html>
                 """
             })
+            logger.info("Magic link dispatched [user=%s, client=%s]", anonymised_user, client_host)
+            security_logger.info("Magic link requested [user=%s, client=%s]", anonymised_user, client_host)
         except Exception as exc:  # noqa: BLE001
             anonymised_key = hashlib.sha256(rate_key.encode()).hexdigest()[:12]
             logger.error(
@@ -138,10 +248,17 @@ async def verify_magic_link(
     email = magic_link_manager.verify_token(token)
 
     if not email:
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()[:12]
+        logger.warning(
+            "Magic link verification failed (invalid/expired) [token_hash=%s]",
+            token_hash,
+        )
         return templates.TemplateResponse(
             "auth/error.html",
             {"request": request, "error": "Invalid or expired magic link"}
         )
+
+    anonymised_user = hashlib.sha256(email.lower().encode()).hexdigest()[:12]
 
     # Find or create user
     result = await db.execute(select(User).where(User.email == email))
@@ -157,6 +274,12 @@ async def verify_magic_link(
     # Store user session (simplified - in production use proper session management)
     response = RedirectResponse(url="/dashboard", status_code=303)
     set_session_cookie(response, email)
+
+    logger.info(
+        "Magic link login successful [user=%s, client=%s]",
+        anonymised_user,
+        request.client.host if request.client else "unknown",
+    )
 
     return response
 

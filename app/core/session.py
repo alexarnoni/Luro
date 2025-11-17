@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import Cookie, Depends, HTTPException, status
+import hashlib
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,12 +13,15 @@ from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
 from app.domain.users.models import User
 
+security_logger = logging.getLogger("app.security")
+
 
 async def get_session_identifier(
     session_value: Optional[str] = Cookie(None, alias=SESSION_COOKIE_NAME),
 ) -> str:
     """Return the session identifier stored in the cookie."""
     if not session_value:
+        security_logger.warning("Unauthorized access attempt without session cookie")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return session_value
 
@@ -30,6 +35,8 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     if not user:
+        hashed_email = hashlib.sha256(session_value.encode()).hexdigest()[:12]
+        security_logger.warning("Unauthorized access attempt for email hash=%s", hashed_email)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     return user

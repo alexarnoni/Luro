@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./luro.db"
+    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "testserver"]
 
     # Application
     ENV: str = "development"
@@ -13,13 +14,23 @@ class Settings(BaseSettings):
     APP_NAME: str = "Luro"
     DEBUG: bool = True
     ENABLE_CSRF_JSON: bool = True
+    ENABLE_SECURITY_HARDENING: bool = False
+    LOG_LEVEL: str = "INFO"
 
     # Resend API
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "noreply@example.com"
 
+    # Captcha
+    TURNSTILE_SITE_KEY: str = ""
+    TURNSTILE_SECRET_KEY: str = ""
+
     # Magic Link
     MAGIC_LINK_EXPIRY_MINUTES: int = 15
+    LOGIN_RATE_LIMIT_IP_MAX: int = 10
+    LOGIN_RATE_LIMIT_IP_WINDOW_SECONDS: int = 10 * 60
+    LOGIN_RATE_LIMIT_EMAIL_MAX: int = 5
+    LOGIN_RATE_LIMIT_EMAIL_WINDOW_SECONDS: int = 60 * 60
 
     # Security
     RATE_LIMIT_MAX: int = 5
@@ -42,3 +53,19 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def _validate_security() -> None:
+    """Fail fast when running production with insecure defaults."""
+    env = settings.ENV.lower()
+    if env != "production":
+        return
+
+    if settings.SECRET_KEY == "change-this-secret-key-in-production":
+        raise ValueError("SECRET_KEY must be set to a strong value in production.")
+
+    if settings.DATABASE_URL.startswith("sqlite"):
+        raise ValueError("Use PostgreSQL in production; sqlite is only for local/dev.")
+
+
+_validate_security()

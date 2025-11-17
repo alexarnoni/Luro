@@ -44,3 +44,15 @@ async def set_language(request: Request, lang: str | None = None):
     # Set long-lived cookie
     resp.set_cookie("lang", cookie_val, max_age=10 * 365 * 24 * 3600, path="/")
     return resp
+
+
+@router.get("/privacidade", response_class=HTMLResponse)
+async def privacy(request: Request):
+    """Privacy policy page."""
+    return templates.TemplateResponse("pages/privacidade.html", {"request": request})
+
+
+@router.get("/termos", response_class=HTMLResponse)
+async def terms(request: Request):
+    """Terms of use page."""
+    return templates.TemplateResponse("pages/termos.html", {"request": request})

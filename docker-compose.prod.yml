@@ -11,7 +11,7 @@ services:
       - db
     ports:
       - "8000:8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers
 
     # Importante: não bindar o projeto inteiro, só os estáticos
     volumes:
@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: luro
       # Esse valor só é usado se você recriar o volume do banco do zero.
       # Enquanto o volume atual existir, ele ignora e usa o que já foi inicializado.
-      POSTGRES_PASSWORD: change-me
+      POSTGRES_PASSWORD: 9f0d7c5b2e4a18439e6f97ed13c28ba1
     volumes:
       - luro-db:/var/lib/postgresql/data
 

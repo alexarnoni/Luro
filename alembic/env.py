@@ -27,6 +27,7 @@ from app.domain.categories.models import Category  # noqa: F401
 from app.domain.rules.models import Rule  # noqa: F401
 from app.domain.goals.models import Goal  # noqa: F401
 from app.domain.insights.models import Insight  # noqa: F401
+from app.domain.security.models import LoginRequest  # noqa: F401
 
 target_metadata = Base.metadata
 

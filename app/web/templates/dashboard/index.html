@@ -71,11 +71,39 @@
         <div id="contas-list" class="accounts-list" aria-live="polite"></div>
     </section>
 
+    <section class="dashboard-section danger-zone">
+        <div class="section-heading">
+            <h2>{{ _('Configurações da conta') }}</h2>
+        </div>
+        <p>{{ _('Excluir sua conta removerá todos os dados financeiros associados. Esta ação é irreversível.') }}</p>
+        <button
+            type="button"
+            class="btn btn-danger"
+            data-delete-account
+            aria-controls="delete-account-modal"
+        >
+            {{ _('Excluir minha conta') }}
+        </button>
+    </section>
+
     <noscript>
         <p class="empty-state">{{ _('Ative o JavaScript para visualizar o resumo financeiro.') }}</p>
     </noscript>
 </div>
 <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<div class="modal" id="delete-account-modal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <h3>{{ _('Excluir conta') }}</h3>
+        <p>{{ _('Tem certeza de que deseja excluir sua conta e todos os dados? Esta ação não pode ser desfeita.') }}</p>
+        <form id="delete-account-form" method="post" action="/account/delete">
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-danger">{{ _('Sim, excluir tudo') }}</button>
+                <button type="button" class="btn btn-secondary" data-close-target="#delete-account-modal">{{ _('Cancelar') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

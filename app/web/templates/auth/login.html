@@ -8,11 +8,21 @@
     <h1>{{ _('Entrar no Luro') }}</h1>
     <p>{{ _('Insira seu e-mail para receber um link mágico de login') }}</p>
         
-        <form method="post" action="/login" class="auth-form">
+        <form method="post" action="/login" class="auth-form" id="login-form">
             <div class="form-group">
                 <label for="email">{{ _('Endereço de e-mail') }}</label>
                 <input type="email" id="email" name="email" required class="form-control" placeholder="{{ _('seu@email.com') }}">
             </div>
+            {% if ENABLE_SECURITY_HARDENING and TURNSTILE_SITE_KEY %}
+            <div class="form-group">
+                <div
+                    class="cf-turnstile"
+                    data-sitekey="{{ TURNSTILE_SITE_KEY }}"
+                    data-theme="light"
+                ></div>
+            </div>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+            {% endif %}
             
             <button type="submit" class="btn btn-primary btn-block">{{ _('Enviar link mágico') }}</button>
         </form>

@@ -713,11 +713,44 @@
         updateChartsTheme();
     });
 
+    function setupAccountDeletion() {
+        const deleteModal = document.getElementById('delete-account-modal');
+        const deleteForm = document.getElementById('delete-account-form');
+        const deleteButton = document.querySelector('[data-delete-account]');
+        if (!deleteModal || !deleteForm || !deleteButton) return;
+
+        deleteButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            deleteModal.removeAttribute('hidden');
+            deleteModal.setAttribute('aria-hidden', 'false');
+            const confirmBtn = deleteForm.querySelector('button[type="submit"]');
+            if (confirmBtn) {
+                setTimeout(() => confirmBtn.focus(), 50);
+            }
+        });
+
+        deleteForm.addEventListener('submit', () => {
+            const submitBtn = deleteForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Excluindo...';
+            }
+        });
+
+        deleteModal.addEventListener('click', (event) => {
+            if (event.target === deleteModal) {
+                deleteModal.setAttribute('hidden', '');
+                deleteModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         palette = getPalette();
         applyChartDefaults();
         showLoadingState();
         setupFilters();
         initializeInsightCard();
+        setupAccountDeletion();
     });
 })();
