@@ -5,6 +5,7 @@
   }
 
   const sessionCookieName = body.dataset.sessionCookieName;
+  const userAuthenticated = body.dataset.userAuthenticated === 'true';
   const csrfEnabled = body.dataset.enableCsrfJson === 'true';
   const originalFetch = window.fetch.bind(window);
 
@@ -14,9 +15,13 @@
   };
 
   function hasSession() {
+    if (userAuthenticated) {
+      return true;
+    }
     if (!sessionCookieName) {
       return false;
     }
+    // HttpOnly cookies won't be visible here, so this is a best-effort fallback.
     return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${sessionCookieName}=`));
   }
 
