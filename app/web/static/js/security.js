@@ -14,17 +14,6 @@
     refreshPromise: null,
   };
 
-  function hasSession() {
-    if (userAuthenticated) {
-      return true;
-    }
-    if (!sessionCookieName) {
-      return false;
-    }
-    // HttpOnly cookies won't be visible here, so this is a best-effort fallback.
-    return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${sessionCookieName}=`));
-  }
-
   async function refreshCsrfToken() {
     try {
       const response = await originalFetch('/api/csrf-token', {
@@ -50,7 +39,7 @@
   }
 
   async function ensureCsrfToken() {
-    if (!csrfEnabled || !hasSession()) {
+    if (!csrfEnabled) {
       return null;
     }
 
@@ -73,7 +62,7 @@
       options.credentials = 'same-origin';
     }
 
-    if (csrfEnabled && !['GET', 'HEAD', 'OPTIONS'].includes(method) && hasSession()) {
+    if (csrfEnabled && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
       const token = await ensureCsrfToken();
       if (token) {
         const headers = new Headers(options.headers || {});
