@@ -297,7 +297,6 @@
                 <div class="account-item">
                     <div class="account-info" style="flex:1;">
                         <div class="skeleton skeleton-line" style="width:60%;"></div>
-                        <div class="skeleton skeleton-line" style="width:40%; height:12px;"></div>
                     </div>
                     <div class="skeleton skeleton-line" style="width:80px; height:20px; margin-bottom:0;"></div>
                 </div>
@@ -578,11 +577,7 @@
             info.className = 'account-info';
             const title = document.createElement('h4');
             title.textContent = conta?.name ?? 'Conta';
-            const meta = document.createElement('span');
-            meta.className = 'account-meta';
-            meta.textContent = `ID ${conta?.id ?? '-'}`;
             info.appendChild(title);
-            info.appendChild(meta);
 
             const balance = document.createElement('span');
             balance.className = 'account-balance';
