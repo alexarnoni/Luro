@@ -704,6 +704,10 @@ html:not(.dark) .theme-toggle__moon {
     color: var(--color-heading);
 }
 
+.account-meta {
+    display: none;
+}
+
 .account-balance {
     font-weight: 600;
     font-size: 1.1rem;
