@@ -92,8 +92,8 @@
     {% endif %}
 </div>
 {% block extra_js %}
-<script src="/static/js/ui.js" defer></script>
-<script src="/static/js/toast.js" defer></script>
-<script src="/static/js/accounts.js" defer></script>
+<script src="/static/js/ui.js?v={{ ASSETS_VERSION }}" defer></script>
+<script src="/static/js/toast.js?v={{ ASSETS_VERSION }}" defer></script>
+<script src="/static/js/accounts.js?v={{ ASSETS_VERSION }}" defer></script>
 {% endblock %}
 {% endblock %}

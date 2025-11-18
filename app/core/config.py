@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 15 * 60
     IMPORT_MAX_FILE_MB: int = 5
 
+    # Static assets cache busting
+    ASSETS_VERSION: str = "1"
+
     # AI Providers
     LLM_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = ""

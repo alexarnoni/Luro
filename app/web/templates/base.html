@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ _('Luro - Gerenciador Financeiro Pessoal') }}{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/style.css?v={{ ASSETS_VERSION }}">
+    <link rel="icon" href="/static/favicon.ico?v={{ ASSETS_VERSION }}" type="image/x-icon">
     {% block extra_css %}{% endblock %}
 </head>
 <body data-session-cookie-name="{{ SESSION_COOKIE_NAME }}" data-enable-csrf-json="{{ 'true' if ENABLE_CSRF_JSON else 'false' }}" data-user-authenticated="{{ 'true' if user else 'false' }}">
@@ -60,8 +60,8 @@
         </div>
     </footer>
 
-    <script src="/static/js/theme.js" defer></script>
-    <script src="/static/js/security.js" defer></script>
+    <script src="/static/js/theme.js?v={{ ASSETS_VERSION }}" defer></script>
+    <script src="/static/js/security.js?v={{ ASSETS_VERSION }}" defer></script>
     <script nonce="{{ request.state.csp_nonce }}">
     // Client-side localized strings for JS to consume (will render translated text)
     window.LURO_I18N = {

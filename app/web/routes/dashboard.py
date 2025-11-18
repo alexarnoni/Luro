@@ -27,6 +27,7 @@ templates = Jinja2Templates(directory="app/web/templates")
 templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
 templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
 templates.env.globals.setdefault("_", i18n.gettext_proxy)
+templates.env.globals.setdefault("ASSETS_VERSION", settings.ASSETS_VERSION)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

@@ -26,6 +26,7 @@ templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
 templates.env.globals.setdefault("_", i18n.gettext_proxy)
 templates.env.globals.setdefault("TURNSTILE_SITE_KEY", settings.TURNSTILE_SITE_KEY)
 templates.env.globals.setdefault("ENABLE_SECURITY_HARDENING", settings.ENABLE_SECURITY_HARDENING)
+templates.env.globals.setdefault("ASSETS_VERSION", settings.ASSETS_VERSION)
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("app.security")
