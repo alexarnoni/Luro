@@ -28,6 +28,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         request_id = request.headers.get("X-Request-ID") or secrets.token_hex(8)
         request.state.request_id = request_id
+        request.state.csp_nonce = secrets.token_urlsafe(16)
         path = request.url.path
         start_time = time.perf_counter()
 
@@ -70,13 +71,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         response = await call_next(request)
 
-        # Build a CSP that is permissive for development (allows inline scripts
-        # and connect to jsdelivr for source map lookups), but keeps stricter
-        # defaults in production. The header value must be a single string.
+        nonce = getattr(request.state, "csp_nonce", None)
+        nonce_directive = f" 'nonce-{nonce}'" if nonce else ""
+
+        # Build a CSP that keeps strict defaults while allowing required third parties.
         if settings.ENV.lower() == "development":
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://challenges.cloudflare.com; "
+                f"script-src 'self'{nonce_directive} https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
                 "frame-src 'self' https://challenges.cloudflare.com; "
@@ -85,11 +87,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         else:
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' https://cdn.jsdelivr.net https://challenges.cloudflare.com; "
+                f"script-src 'self'{nonce_directive} https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
                 "frame-src 'self' https://challenges.cloudflare.com; "
-                "connect-src 'self';"
+                "connect-src 'self' https://cdn.jsdelivr.net;"
             )
 
         response.headers.setdefault("Content-Security-Policy", csp)

@@ -59,7 +59,7 @@
 
     <script src="/static/js/theme.js" defer></script>
     <script src="/static/js/security.js" defer></script>
-    <script>
+    <script nonce="{{ request.state.csp_nonce }}">
     // Client-side localized strings for JS to consume (will render translated text)
     window.LURO_I18N = {
         'invalid_balance': "{{ _('Formato de saldo inválido') }}",
@@ -82,7 +82,7 @@
         'unable_delete_transaction_prefix': "{{ _('Não foi possível excluir a transação: ') }}"
     };
     </script>
-    <script>
+    <script nonce="{{ request.state.csp_nonce }}">
     // Logo redirect: if user is authenticated, send to dashboard instead of home
     (function(){
         try {
