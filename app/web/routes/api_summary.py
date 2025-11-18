@@ -78,33 +78,10 @@ async def get_financial_summary(
         for key in month_series
     ]
 
-    month_start_dt = internal.get("month_start")
-    month_end_dt = internal.get("month_end")
-    if month_start_dt is None or month_end_dt is None:
-        raise ValueError("monthly analytics missing date boundaries")
-
-    balance_case = case(
-        (Transaction.transaction_type == "income", Transaction.amount),
-        (Transaction.transaction_type == "expense", -Transaction.amount),
-        else_=0,
-    )
-
+    # Use current account balances for the "Saldos por conta" section instead of month-scoped sums
     accounts_stmt = (
-        select(
-            Account.id,
-            Account.name,
-            func.coalesce(func.sum(balance_case), 0).label("saldo"),
-        )
-        .outerjoin(
-            Transaction,
-            and_(
-                Transaction.account_id == Account.id,
-                Transaction.transaction_date >= month_start_dt,
-                Transaction.transaction_date < month_end_dt,
-            ),
-        )
+        select(Account.id, Account.name, Account.balance.label("saldo"))
         .where(Account.user_id == user.id)
-        .group_by(Account.id, Account.name)
         .order_by(Account.name)
     )
 
