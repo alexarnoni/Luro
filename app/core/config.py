@@ -1,5 +1,15 @@
+import json
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+
+def _safe_json_loads(value: str):
+    """Try JSON decode; on failure return the raw string so validators can handle."""
+    try:
+        return json.loads(value)
+    except Exception:
+        return value
 
 
 class Settings(BaseSettings):
@@ -54,6 +64,8 @@ class Settings(BaseSettings):
     model_config = {
         "env_file": ".env",
         "extra": "ignore",
+        # Allow non-JSON values for list fields (e.g., comma-separated) by falling back to raw string
+        "json_loads": staticmethod(lambda v: _safe_json_loads(v)),
     }
 
     @field_validator("ADMIN_EMAILS", mode="before")
