@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Acesso negado') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Acesso negado') }}</h1>
+    <p class="dashboard-subtitle">{{ detail or _('Você não tem permissão para acessar esta página.') }}</p>
+</div>
+<div class="dashboard-section">
+    <div class="section-actions">
+        <a class="btn btn-primary" href="/login">{{ _('Ir para login') }}</a>
+        <a class="btn btn-secondary" href="/">{{ _('Voltar para início') }}</a>
+    </div>
+</div>
+{% endblock %}
