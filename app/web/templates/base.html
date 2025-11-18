@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ _('Luro - Gerenciador Financeiro Pessoal') }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     {% block extra_css %}{% endblock %}
 </head>
 <body data-session-cookie-name="{{ SESSION_COOKIE_NAME }}" data-enable-csrf-json="{{ 'true' if ENABLE_CSRF_JSON else 'false' }}" data-user-authenticated="{{ 'true' if user else 'false' }}">
