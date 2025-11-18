@@ -11,7 +11,7 @@ from app.domain.users.models import User
 def require_admin(user: User = Depends(get_current_user)) -> User:
     """Ensure the current user is in the configured admin allowlist."""
     email = (user.email or "").lower().strip()
-    if email not in settings.ADMIN_EMAILS:
+    if email not in settings.admin_emails:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return user
 

@@ -1,15 +1,7 @@
-import json
+from typing import Any
 
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
-
-
-def _safe_json_loads(value: str):
-    """Try JSON decode; on failure return the raw string so validators can handle."""
-    try:
-        return json.loads(value)
-    except Exception:
-        return value
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -47,7 +39,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_MAX: int = 5
     RATE_LIMIT_WINDOW_SECONDS: int = 15 * 60
     IMPORT_MAX_FILE_MB: int = 5
-    ADMIN_EMAILS: list[str] = []
+    ADMIN_EMAILS_RAW: str = Field(default="", alias="ADMIN_EMAILS")
 
     # Static assets cache busting
     ASSETS_VERSION: str = "1"
@@ -61,31 +53,35 @@ class Settings(BaseSettings):
     INSIGHTS_MAX_PER_MONTH: int = 5
 
     # Pydantic v2 compatible settings: read .env and ignore extra env vars
-    model_config = {
-        "env_file": ".env",
-        "extra": "ignore",
-        # Allow non-JSON values for list fields (e.g., comma-separated) by falling back to raw string
-        "json_loads": staticmethod(lambda v: _safe_json_loads(v)),
-    }
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
-    @field_validator("ADMIN_EMAILS", mode="before")
-    @classmethod
-    def normalize_admin_emails(cls, value):
-        """Accept comma-separated string or list and normalize to lowercase list."""
-        if value is None or value == "":
-            return []
-        if isinstance(value, str):
-            parts = [part.strip() for part in value.split(",")]
-        elif isinstance(value, (list, tuple, set)):
-            parts = [str(part).strip() for part in value]
-        else:
-            raise TypeError("ADMIN_EMAILS must be a string or list")
-
-        normalized = [part.lower() for part in parts if part]
-        return normalized
+    @computed_field
+    @property
+    def admin_emails(self) -> list[str]:
+        """Return normalized admin emails list from raw env input."""
+        return _normalize_admin_emails(self.ADMIN_EMAILS_RAW)
 
 
 settings = Settings()
+
+
+def _normalize_admin_emails(value: Any) -> list[str]:
+    """Accept comma-separated string or list-like and normalize to lowercase."""
+    if value is None or value == "":
+        return []
+
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+    elif isinstance(value, (list, tuple, set)):
+        parts = [str(part).strip() for part in value]
+    else:
+        return []
+
+    return [part.lower() for part in parts if part]
 
 
 def _validate_security() -> None:

@@ -14,7 +14,7 @@ templates.env.globals.setdefault("_", i18n.gettext_proxy)
 templates.env.globals.setdefault("ASSETS_VERSION", settings.ASSETS_VERSION)
 templates.env.globals.setdefault(
     "is_admin",
-    lambda user: bool(user and getattr(user, "email", None) and user.email.lower() in settings.ADMIN_EMAILS),
+    lambda user: bool(user and getattr(user, "email", None) and user.email.lower() in settings.admin_emails),
 )
 
 
