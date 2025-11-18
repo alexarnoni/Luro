@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Admin - Luro') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Área Administrativa') }}</h1>
+    <p class="dashboard-subtitle">{{ _('Visão rápida de saúde, segurança e configuração.') }}</p>
+</div>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>{{ _('Saúde do sistema') }}</h2>
+    </div>
+    <div class="cards-grid">
+        <div class="card">
+            <h3>{{ _('Banco de dados') }}</h3>
+            <p>
+                {% if db_ok %}
+                    <span class="status status-ok">✔ {{ _('Online') }}</span>
+                {% else %}
+                    <span class="status status-bad">✖ {{ _('Falha') }}</span>
+                {% endif %}
+            </p>
+            <p>{{ _('Driver/URL') }}: <code>{{ db_url }}</code></p>
+            <p>{{ _('Tamanho') }}: {{ db_size if db_size else _('Indisponível') }}</p>
+        </div>
+        <div class="card">
+            <h3>{{ _('Ambiente') }}</h3>
+            <ul class="status-list">
+                <li>{{ _('ENV') }}: <strong>{{ app_env }}</strong></li>
+                <li>{{ _('App') }}: <strong>{{ app_name }}</strong></li>
+                <li>{{ _('Hosts permitidos') }}: <code>{{ allowed_hosts|join(", ") }}</code></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>{{ _('Variáveis críticas') }}</h3>
+            <ul class="status-list">
+                {% for key, ok in env_status.items() %}
+                <li>{{ key }}: {% if ok %}<span class="status status-ok">{{ _('presente') }}</span>{% else %}<span class="status status-bad">{{ _('faltando/placeholder') }}</span>{% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>{{ _('Segurança / Login') }}</h2>
+    </div>
+    {% if login_events %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>{{ _('Quando') }}</th>
+                    <th>{{ _('Email') }}</th>
+                    <th>{{ _('IP') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in login_events %}
+                <tr>
+                    <td>{{ event.requested_at }}</td>
+                    <td>{{ event.email }}</td>
+                    <td>{{ event.ip or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">{{ _('Nenhum pedido de login encontrado.') }}</p>
+    {% endif %}
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>{{ _('Dados / Backup') }}</h2>
+    </div>
+    <p>{{ _('Use um snapshot do arquivo do banco (sqlite) ou backup via provedor se estiver em Postgres.') }}</p>
+    <ul class="status-list">
+        <li>{{ _('Driver/URL atual') }}: <code>{{ db_url }}</code></li>
+        <li>{{ _('Tamanho estimado') }}: {{ db_size if db_size else _('Indisponível') }}</li>
+        <li>{{ _('Horário do servidor (UTC)') }}: {{ server_time }}</li>
+    </ul>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>{{ _('Configuração de IA') }}</h2>
+    </div>
+    <div class="cards-grid">
+        <div class="card">
+            <h3>{{ _('Provider') }}</h3>
+            <p><strong>{{ ai_config.provider }}</strong></p>
+            <p>{{ _('Limite mensal de insights') }}: {{ ai_config.insights_limit }}</p>
+        </div>
+        <div class="card">
+            <h3>{{ _('Chaves') }}</h3>
+            <ul class="status-list">
+                <li>Gemini: {% if ai_config.gemini_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
+                <li>OpenAI: {% if ai_config.openai_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <h2>{{ _('Logs recentes') }}</h2>
+    </div>
+    {% if logs_tail %}
+    <pre class="log-box">{% for line in logs_tail %}{{ line }}
+{% endfor %}</pre>
+    {% else %}
+    <p class="empty-state">{{ _('Nenhum log disponível ainda.') }}</p>
+    {% endif %}
+</section>
+{% endblock %}

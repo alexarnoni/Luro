@@ -8,7 +8,7 @@ from app.core.database import init_db
 from app.core.logging_config import setup_logging
 from app.core.middleware import CSRFMiddleware, RequestContextMiddleware, SecurityHeadersMiddleware
 from app.core.i18n import I18nMiddleware, gettext_proxy
-from app.web.routes import api, auth, dashboard, pages
+from app.web.routes import api, auth, dashboard, pages, admin
 from app.web.routes import account, health
 
 setup_logging()
@@ -47,6 +47,7 @@ app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
 app.include_router(pages.router, tags=["pages"])
 app.include_router(auth.router, tags=["auth"])
 app.include_router(dashboard.router, tags=["dashboard"])
+app.include_router(admin.router, tags=["admin"])
 app.include_router(api.router, prefix="/api", tags=["api"])
 app.include_router(account.router, tags=["account"])
 app.include_router(health.router, tags=["health"])

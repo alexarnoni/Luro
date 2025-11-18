@@ -28,6 +28,10 @@ templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
 templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
 templates.env.globals.setdefault("_", i18n.gettext_proxy)
 templates.env.globals.setdefault("ASSETS_VERSION", settings.ASSETS_VERSION)
+templates.env.globals.setdefault(
+    "is_admin",
+    lambda user: bool(user and getattr(user, "email", None) and user.email.lower() in settings.ADMIN_EMAILS),
+)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

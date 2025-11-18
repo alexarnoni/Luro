@@ -27,6 +27,10 @@ templates.env.globals.setdefault("_", i18n.gettext_proxy)
 templates.env.globals.setdefault("TURNSTILE_SITE_KEY", settings.TURNSTILE_SITE_KEY)
 templates.env.globals.setdefault("ENABLE_SECURITY_HARDENING", settings.ENABLE_SECURITY_HARDENING)
 templates.env.globals.setdefault("ASSETS_VERSION", settings.ASSETS_VERSION)
+templates.env.globals.setdefault(
+    "is_admin",
+    lambda user: bool(user and getattr(user, "email", None) and user.email.lower() in settings.ADMIN_EMAILS),
+)
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("app.security")

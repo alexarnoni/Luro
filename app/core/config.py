@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -36,6 +37,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_MAX: int = 5
     RATE_LIMIT_WINDOW_SECONDS: int = 15 * 60
     IMPORT_MAX_FILE_MB: int = 5
+    ADMIN_EMAILS: list[str] = []
 
     # Static assets cache busting
     ASSETS_VERSION: str = "1"
@@ -53,6 +55,22 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "extra": "ignore",
     }
+
+    @field_validator("ADMIN_EMAILS", mode="before")
+    @classmethod
+    def normalize_admin_emails(cls, value):
+        """Accept comma-separated string or list and normalize to lowercase list."""
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            parts = [part.strip() for part in value.split(",")]
+        elif isinstance(value, (list, tuple, set)):
+            parts = [str(part).strip() for part in value]
+        else:
+            raise TypeError("ADMIN_EMAILS must be a string or list")
+
+        normalized = [part.lower() for part in parts if part]
+        return normalized
 
 
 settings = Settings()

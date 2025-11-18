@@ -18,6 +18,9 @@
                 <li><a href="/accounts">{{ _('Contas') }}</a></li>
                 <li><a href="/transactions">{{ _('Transações') }}</a></li>
                 <li><a href="/goals">{{ _('Metas') }}</a></li>
+                {% if is_admin(user) %}
+                <li><a href="/admin">{{ _('Admin') }}</a></li>
+                {% endif %}
                 <li><a href="/logout">{{ _('Sair') }}</a></li>
             </ul>
             {% else %}
