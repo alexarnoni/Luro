@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from app.core.config import settings
@@ -172,3 +173,29 @@ def _build_stub_content(summary_json: dict[str, Any], provider_name: str) -> str
         quick_win,
         cta,
     ])
+
+
+async def test_llm_connectivity() -> dict[str, Any]:
+    """Lightweight connectivity test to the configured provider."""
+    provider = (os.getenv("LLM_PROVIDER") or getattr(settings, "LLM_PROVIDER", "")).strip().lower() or "gemini"
+    sample_summary = {
+        "totals": {"income": 1000, "expense": 800},
+        "by_category": [{"name": "geral", "percent": 80}],
+        "delta_vs_3m": {"income_pct": 0, "expense_pct": 0},
+    }
+    started = time.perf_counter()
+    try:
+        text = await generate_insight(sample_summary)
+        duration_ms = (time.perf_counter() - started) * 1000
+        return {
+            "ok": True,
+            "provider": provider,
+            "latency_ms": round(duration_ms, 1),
+            "preview": (text or "").strip()[:200],
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "provider": provider,
+            "detail": str(exc),
+        }

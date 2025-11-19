@@ -1,11 +1,11 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, desc, text
+from sqlalchemy import select, desc, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import i18n
@@ -15,6 +15,7 @@ from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
 from app.domain.security.models import LoginRequest
 from app.domain.users.models import User
+from app.services.llm_client import test_llm_connectivity
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +65,12 @@ def _tail_logs(max_lines: int = 20) -> list[str]:
         return []
 
 
-@router.get("/admin", response_class=HTMLResponse)
-async def admin_dashboard(
+async def _build_admin_context(
     request: Request,
-    user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
+    user: User,
+    db: AsyncSession,
+    ai_test_result: dict | None = None,
 ):
-    """Admin dashboard with health, security, data, AI config, and logs."""
     db_ok = await _database_health(db)
     db_size = _database_size_bytes()
 
@@ -81,6 +81,48 @@ async def admin_dashboard(
         .limit(20)
     )
     login_events = login_rows.scalars().all()
+
+    # Login summaries (last 30 days)
+    window_start = datetime.utcnow() - timedelta(days=30)
+    email_summary_rows = await db.execute(
+        select(
+            LoginRequest.email.label("email"),
+            func.count(LoginRequest.id).label("count"),
+            func.max(LoginRequest.requested_at).label("last_seen"),
+        )
+        .where(LoginRequest.requested_at >= window_start)
+        .group_by(LoginRequest.email)
+        .order_by(desc(func.max(LoginRequest.requested_at)))
+        .limit(10)
+    )
+    login_email_summary = [
+        {
+            "email": row.email,
+            "count": row.count,
+            "last_seen": row.last_seen,
+        }
+        for row in email_summary_rows.fetchall()
+    ]
+
+    ip_summary_rows = await db.execute(
+        select(
+            LoginRequest.ip.label("ip"),
+            func.count(LoginRequest.id).label("count"),
+            func.max(LoginRequest.requested_at).label("last_seen"),
+        )
+        .where(LoginRequest.requested_at >= window_start, LoginRequest.ip.is_not(None))
+        .group_by(LoginRequest.ip)
+        .order_by(desc(func.max(LoginRequest.requested_at)))
+        .limit(10)
+    )
+    login_ip_summary = [
+        {
+            "ip": row.ip,
+            "count": row.count,
+            "last_seen": row.last_seen,
+        }
+        for row in ip_summary_rows.fetchall()
+    ]
 
     env_status = {
         "SECRET_KEY": bool(settings.SECRET_KEY and settings.SECRET_KEY != "change-this-secret-key-in-production"),
@@ -104,12 +146,37 @@ async def admin_dashboard(
         "env_status": env_status,
         "ai_config": ai_config,
         "login_events": login_events,
+        "login_email_summary": login_email_summary,
+        "login_ip_summary": login_ip_summary,
         "logs_tail": _tail_logs(),
         "app_env": settings.ENV,
         "app_name": settings.APP_NAME,
         "allowed_hosts": settings.ALLOWED_HOSTS,
         "server_time": datetime.utcnow(),
         "db_url": settings.DATABASE_URL,
+        "ai_test_result": ai_test_result,
     }
+    return context
 
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin dashboard with health, security, data, AI config, and logs."""
+    context = await _build_admin_context(request, user, db)
+    return templates.TemplateResponse("admin/index.html", context)
+
+
+@router.post("/admin/ai-test", response_class=HTMLResponse)
+async def admin_ai_test(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run a lightweight connectivity test to the configured LLM provider."""
+    result = await test_llm_connectivity()
+    context = await _build_admin_context(request, user, db, ai_test_result=result)
     return templates.TemplateResponse("admin/index.html", context)

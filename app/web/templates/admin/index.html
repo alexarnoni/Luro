@@ -48,6 +48,32 @@
     <div class="section-heading">
         <h2>{{ _('Segurança / Login') }}</h2>
     </div>
+    <div class="cards-grid">
+        <div class="card">
+            <h3>{{ _('Resumo por email (30 dias)') }}</h3>
+            {% if login_email_summary %}
+            <ul class="status-list">
+                {% for row in login_email_summary %}
+                <li><strong>{{ row.email }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-state">{{ _('Sem dados recentes.') }}</p>
+            {% endif %}
+        </div>
+        <div class="card">
+            <h3>{{ _('Resumo por IP (30 dias)') }}</h3>
+            {% if login_ip_summary %}
+            <ul class="status-list">
+                {% for row in login_ip_summary %}
+                <li><strong>{{ row.ip }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-state">{{ _('Sem dados recentes.') }}</p>
+            {% endif %}
+        </div>
+    </div>
     {% if login_events %}
     <div class="table-responsive">
         <table class="table">
@@ -102,6 +128,21 @@
                 <li>Gemini: {% if ai_config.gemini_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
                 <li>OpenAI: {% if ai_config.openai_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
             </ul>
+            <form method="post" action="/admin/ai-test" style="margin-top: 0.5rem;">
+                <button type="submit" class="btn btn-primary">{{ _('Testar provider') }}</button>
+            </form>
+            {% if ai_test_result is defined and ai_test_result %}
+                {% if ai_test_result.ok %}
+                <p class="status status-ok" style="margin-top: 0.5rem;">
+                    {{ _('Ok') }} ({{ ai_test_result.provider }}, {{ ai_test_result.latency_ms }}ms)
+                </p>
+                <p style="white-space: pre-wrap;">{{ ai_test_result.preview }}</p>
+                {% else %}
+                <p class="status status-bad" style="margin-top: 0.5rem;">
+                    {{ _('Falhou') }} ({{ ai_test_result.provider }}): {{ ai_test_result.detail }}
+                </p>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
 </section>
