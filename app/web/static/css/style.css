@@ -96,14 +96,20 @@ body {
     flex-direction: column;
 }
 
+body[data-nav-open="true"] {
+    overflow: hidden;
+}
+
 :focus-visible {
     outline: 3px solid var(--color-focus);
     outline-offset: 2px;
 }
 
 .container {
-    width: min(1200px, 92vw);
+    width: min(1200px, 100%);
     margin: 0 auto;
+    padding-left: clamp(1rem, 4vw, 2rem);
+    padding-right: clamp(1rem, 4vw, 2rem);
 }
 
 .navbar {
@@ -120,7 +126,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
-    padding: 1rem 0;
+    padding: clamp(0.75rem, 3vw, 1.25rem) clamp(1rem, 4vw, 2rem);
 }
 
 .logo {
@@ -130,12 +136,71 @@ body {
     color: var(--color-navbar-text);
 }
 
+.nav-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    gap: 1.5rem;
+}
+
+.nav-links-container {
+    display: flex;
+    align-items: center;
+}
+
+.nav-toggle {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: transparent;
+    color: var(--color-navbar-text);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-toggle:hover,
+.nav-toggle:focus-visible {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-toggle__bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.nav-toggle__bar + .nav-toggle__bar {
+    margin-top: 5px;
+}
+
+.navbar[data-nav-state="open"] .nav-toggle__bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.navbar[data-nav-state="open"] .nav-toggle__bar:nth-child(2) {
+    opacity: 0;
+}
+
+.navbar[data-nav-state="open"] .nav-toggle__bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
 .nav-links {
     display: flex;
     list-style: none;
     gap: 1.5rem;
     margin: 0;
     padding: 0;
+    align-items: center;
 }
 
 .nav-links a {
@@ -148,6 +213,80 @@ body {
 .nav-links a:hover,
 .nav-links a:focus-visible {
     opacity: 0.75;
+}
+
+.nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(2px);
+    z-index: 90;
+    display: none;
+}
+
+.nav-backdrop:not([hidden]) {
+    display: block;
+}
+
+@media (max-width: 900px) {
+    .nav-actions {
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .logo {
+        font-size: 1.25rem;
+    }
+
+    .nav-toggle {
+        display: inline-flex;
+    }
+
+    .nav-links-container {
+        width: auto;
+    }
+
+    body[data-nav-open] .nav-links-container {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(320px, 85vw);
+        height: 100vh;
+        padding: 5rem 1.75rem 2rem;
+        background: var(--color-navbar-bg);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+        box-shadow: var(--shadow-lg);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 110;
+        visibility: hidden;
+        pointer-events: none;
+        overflow-y: auto;
+    }
+
+    body[data-nav-open] .nav-links {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+        gap: 1rem;
+    }
+
+    .navbar[data-nav-state="open"] .nav-links-container {
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .nav-links a {
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .theme-toggle {
+        margin-left: auto;
+    }
 }
 
 .theme-toggle {
@@ -200,7 +339,7 @@ html:not(.dark) .theme-toggle__moon {
 
 .main-content {
     flex: 1 1 auto;
-    padding: 2.5rem 0;
+    padding: clamp(1.5rem, 5vw, 3rem) 0;
 }
 
 .hero {
@@ -658,7 +797,7 @@ html:not(.dark) .theme-toggle__moon {
 
 .accounts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
 }
 
@@ -726,11 +865,14 @@ html:not(.dark) .theme-toggle__moon {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .transactions-table table {
     width: 100%;
+    min-width: 720px;
     border-collapse: collapse;
 }
 
@@ -762,6 +904,18 @@ html:not(.dark) .theme-toggle__moon {
 .transactions-table td.negative {
     color: var(--color-expense);
     font-weight: 600;
+}
+
+.txn-edit-inline {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.txn-edit-inline .form-control {
+    flex: 1 1 140px;
+    min-width: 140px;
 }
 
 .badge {
@@ -921,6 +1075,14 @@ html.dark .empty-state__icon {
     color: var(--color-heading);
 }
 
+@media (max-width: 640px) {
+    .goal-grid,
+    .accounts-grid,
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .goal-description,
 .goal-date,
 .progress-details,
@@ -975,24 +1137,16 @@ html.dark .empty-state__icon {
 }
 
 @media (max-width: 768px) {
-    .navbar .container {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .nav-links {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .theme-toggle {
-        order: -1;
-    }
-
     .page-header,
     .dashboard-header {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
+        gap: 1.25rem;
+    }
+
+    .page-header > *,
+    .dashboard-header > * {
+        width: 100%;
     }
 
     .form-actions {
@@ -1003,6 +1157,10 @@ html.dark .empty-state__icon {
     .totals-grid {
         grid-template-columns: 1fr;
     }
+
+    .dashboard-filters {
+        width: 100%;
+    }
 }
 
 @media (max-width: 600px) {
@@ -1010,9 +1168,43 @@ html.dark .empty-state__icon {
         padding: 1.5rem;
     }
 
+    .dashboard-section,
+    .page-section,
+    .form-card {
+        padding: 1.25rem;
+    }
+
+    .section-heading {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .transactions-table table {
+        min-width: 640px;
+    }
+
     .transactions-table th,
     .transactions-table td {
         padding: 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    .chart-card {
+        min-height: 360px;
+    }
+
+    .chart-wrapper {
+        min-height: 260px;
+    }
+
+    .txn-edit-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .txn-edit-inline .btn {
+        width: 100%;
     }
 }
 

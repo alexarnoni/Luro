@@ -9,39 +9,48 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body data-session-cookie-name="{{ SESSION_COOKIE_NAME }}" data-enable-csrf-json="{{ 'true' if ENABLE_CSRF_JSON else 'false' }}" data-user-authenticated="{{ 'true' if user else 'false' }}">
-    <nav class="navbar" data-nav>
+    <nav class="navbar" data-nav data-nav-state="closed">
         <div class="container">
             <a href="/" class="logo" id="site-logo">Luro</a>
-            {% if user %}
-            <ul class="nav-links">
-                <li><a href="/dashboard">{{ _('Painel') }}</a></li>
-                <li><a href="/accounts">{{ _('Contas') }}</a></li>
-                <li><a href="/transactions">{{ _('Transações') }}</a></li>
-                <li><a href="/goals">{{ _('Metas') }}</a></li>
-                {% if is_admin(user) %}
-                <li><a href="/admin">{{ _('Admin') }}</a></li>
+            <div class="nav-actions">
+                <button type="button" class="nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="primary-navigation" aria-label="{{ _('Abrir menu') }}">
+                    <span class="nav-toggle__bar" aria-hidden="true"></span>
+                    <span class="nav-toggle__bar" aria-hidden="true"></span>
+                    <span class="nav-toggle__bar" aria-hidden="true"></span>
+                </button>
+                <div class="nav-links-container" id="primary-navigation" data-nav-panel tabindex="-1">
+                {% if user %}
+                    <ul class="nav-links">
+                        <li><a href="/dashboard">{{ _('Painel') }}</a></li>
+                        <li><a href="/accounts">{{ _('Contas') }}</a></li>
+                        <li><a href="/transactions">{{ _('Transações') }}</a></li>
+                        <li><a href="/goals">{{ _('Metas') }}</a></li>
+                        {% if is_admin(user) %}
+                        <li><a href="/admin">{{ _('Admin') }}</a></li>
+                        {% endif %}
+                        <li><a href="/logout">{{ _('Sair') }}</a></li>
+                    </ul>
+                {% else %}
+                    <ul class="nav-links">
+                        <li><a href="/login">{{ _('Entrar') }}</a></li>
+                    </ul>
                 {% endif %}
-                <li><a href="/logout">{{ _('Sair') }}</a></li>
-            </ul>
-            {% else %}
-            <ul class="nav-links">
-                <li><a href="/login">{{ _('Entrar') }}</a></li>
-            </ul>
-            {% endif %}
-            
-            <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Alternar para tema escuro">
-                <span class="theme-toggle__icon" aria-hidden="true">
-                    <svg class="theme-toggle__sun" viewBox="0 0 24 24" role="presentation" focusable="false">
-                        <path d="M12 4.75a.75.75 0 0 1-.75-.75V2a.75.75 0 0 1 1.5 0v2a.75.75 0 0 1-.75.75Zm0 16a.75.75 0 0 1-.75-.75v-2a.75.75 0 1 1 1.5 0v2a.75.75 0 0 1-.75.75ZM5.28 6.34a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06L5.28 6.34Zm13.02 12.02a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM4.75 12a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25A.75.75 0 0 1 4.75 12Zm16 0a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25a.75.75 0 0 1-.75.75ZM5.28 17.66 3.86 19.08a.75.75 0 1 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06Zm13.44-11.32a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />
-                    </svg>
-                    <svg class="theme-toggle__moon" viewBox="0 0 24 24" role="presentation" focusable="false">
-                        <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79Z" />
-                    </svg>
-                </span>
-                <span class="theme-toggle__label" data-theme-toggle-text>{{ _('Modo claro') }}</span>
-            </button>
+                </div>
+                <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Alternar para tema escuro">
+                    <span class="theme-toggle__icon" aria-hidden="true">
+                        <svg class="theme-toggle__sun" viewBox="0 0 24 24" role="presentation" focusable="false">
+                            <path d="M12 4.75a.75.75 0 0 1-.75-.75V2a.75.75 0 0 1 1.5 0v2a.75.75 0 0 1-.75.75Zm0 16a.75.75 0 0 1-.75-.75v-2a.75.75 0 1 1 1.5 0v2a.75.75 0 0 1-.75.75ZM5.28 6.34a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06L5.28 6.34Zm13.02 12.02a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM4.75 12a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25A.75.75 0 0 1 4.75 12Zm16 0a.75.75 0 0 1-.75-.75V9a.75.75 0 0 1 1.5 0v2.25a.75.75 0 0 1-.75.75ZM5.28 17.66 3.86 19.08a.75.75 0 1 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06Zm13.44-11.32a.75.75 0 0 1-1.06-1.06l1.42-1.42a.75.75 0 1 1 1.06 1.06l-1.42 1.42ZM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />
+                        </svg>
+                        <svg class="theme-toggle__moon" viewBox="0 0 24 24" role="presentation" focusable="false">
+                            <path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79Z" />
+                        </svg>
+                    </span>
+                    <span class="theme-toggle__label" data-theme-toggle-text>{{ _('Modo claro') }}</span>
+                </button>
+            </div>
         </div>
     </nav>
+    <div class="nav-backdrop" data-nav-backdrop hidden></div>
 
     <main class="main-content">
         <div class="container">
@@ -106,6 +115,78 @@
         } catch (e) {
             // noop
         }
+    })();
+    </script>
+    <script nonce="{{ request.state.csp_nonce }}">
+    // Mobile navigation toggle with backdrop/focus management
+    (function() {
+        var nav = document.querySelector('[data-nav]');
+        if (!nav) return;
+        var toggle = nav.querySelector('[data-nav-toggle]');
+        var panel = nav.querySelector('[data-nav-panel]');
+        var backdrop = document.querySelector('[data-nav-backdrop]');
+        if (!toggle || !panel) return;
+
+        document.body.setAttribute('data-nav-open', 'false');
+
+        var labels = {
+            open: {{ _('Abrir menu')|tojson }},
+            close: {{ _('Fechar menu')|tojson }}
+        };
+
+        function setState(open, options) {
+            var opts = options || {};
+            nav.setAttribute('data-nav-state', open ? 'open' : 'closed');
+            document.body.setAttribute('data-nav-open', open ? 'true' : 'false');
+            if (backdrop) backdrop.hidden = !open;
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? labels.close : labels.open);
+            if (open) {
+                var first = panel.querySelector('a, button, [tabindex]:not([tabindex="-1"])');
+                (first || panel).focus();
+            } else if (!opts.skipFocus) {
+                toggle.focus();
+            }
+        }
+
+        toggle.addEventListener('click', function() {
+            var open = nav.getAttribute('data-nav-state') === 'open';
+            setState(!open);
+        });
+
+        if (backdrop) {
+            backdrop.addEventListener('click', function() {
+                setState(false);
+            });
+        }
+
+        var desktopQuery = window.matchMedia ? window.matchMedia('(min-width: 901px)') : null;
+        function handleDesktopChange(event) {
+            if (event.matches) {
+                setState(false, { skipFocus: true });
+            }
+        }
+        if (desktopQuery) {
+            if (desktopQuery.addEventListener) {
+                desktopQuery.addEventListener('change', handleDesktopChange);
+            } else if (desktopQuery.addListener) {
+                desktopQuery.addListener(handleDesktopChange);
+            }
+        }
+
+        panel.addEventListener('click', function(event) {
+            if (nav.getAttribute('data-nav-state') !== 'open') return;
+            var target = event.target.closest ? event.target.closest('a[href]') : null;
+            if (target) {
+                setState(false, { skipFocus: true });
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && nav.getAttribute('data-nav-state') === 'open') {
+                setState(false);
+            }
+        });
     })();
     </script>
     {% block extra_js %}{% endblock %}

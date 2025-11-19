@@ -98,7 +98,7 @@
             <tr id="txn-edit-{{ transaction.id }}" class="txn-edit-row" hidden>
                 <td colspan="7">
                     <form action="/transactions/{{ transaction.id }}/edit" method="post" class="txn-edit-form-ajax" data-txn-id="{{ transaction.id }}">
-                        <div style="display:flex; gap:8px; align-items:center;">
+                        <div class="txn-edit-inline">
                             <input name="description" class="form-control" value="{{ transaction.description or '' }}" placeholder="{{ _('Descrição') }}">
                             <input name="amount" class="form-control" value="{{ '%.2f'|format(transaction.amount) }}" placeholder="{{ _('Valor') }}">
                             <select name="transaction_type" class="form-control">
