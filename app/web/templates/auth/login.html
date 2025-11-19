@@ -6,7 +6,7 @@
 <div class="auth-container">
     <div class="auth-card">
     <h1>{{ _('Entrar no Luro') }}</h1>
-    <p>{{ _('Insira seu e-mail para receber um link mágico de login') }}</p>
+    <p>{{ _('Insira seu e-mail para receber um link de login') }}</p>
         
         <form method="post" action="/login" class="auth-form" id="login-form">
             <div class="form-group">
@@ -24,7 +24,7 @@
             <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
             {% endif %}
             
-            <button type="submit" class="btn btn-primary btn-block">{{ _('Enviar link mágico') }}</button>
+            <button type="submit" class="btn btn-primary btn-block">{{ _('Enviar link') }}</button>
         </form>
         
         <p class="auth-note">

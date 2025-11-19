@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Link mágico enviado - Luro') }}{% endblock %}
+{% block title %}{{ _('Link enviado - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="auth-container">
@@ -12,7 +12,7 @@
         {% if debug and magic_link %}
         <div class="debug-section">
             <h3>{{ _('Modo de depuração') }}</h3>
-            <p>{{ _('Como você está em modo de depuração, aqui está seu link mágico:') }}</p>
+            <p>{{ _('Como você está em modo de depuração, aqui está seu link de login:') }}</p>
             <a href="{{ magic_link }}" class="btn btn-primary">{{ _('Entrar agora') }}</a>
         </div>
         {% endif %}
