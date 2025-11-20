@@ -250,15 +250,11 @@ async def create_transaction(
     )
     db.add(transaction)
 
-    # Update account balance with safety checks
+    # Update account balance (allow negative balances for record-keeping)
     try:
         if tx_type == "income":
             account.balance = (account.balance or 0.0) + abs(amt)
         else:  # expense
-            # simple overdraft prevention
-            if account.balance is not None and account.balance < abs(amt):
-                await db.rollback()
-                raise HTTPException(status_code=400, detail="Insufficient funds in account")
             account.balance = (account.balance or 0.0) - abs(amt)
         db.add(account)
         await db.commit()
@@ -450,10 +446,6 @@ async def edit_transaction(
         if new_type == 'income':
             account.balance = (account.balance or 0.0) + abs(new_amt)
         else:
-            # check overdraft
-            if account.balance is not None and account.balance < abs(new_amt):
-                await db.rollback()
-                raise HTTPException(status_code=400, detail="Insufficient funds in account for this change")
             account.balance = (account.balance or 0.0) - abs(new_amt)
 
         # update transaction
