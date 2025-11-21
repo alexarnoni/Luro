@@ -83,9 +83,11 @@
     if (createForm && !createForm.dataset.toggleBound) {
       const typeSel = createForm.querySelector('#account_type');
       const creditBlocks = createForm.querySelectorAll('[data-credit-only]');
+      const nonCreditBlocks = createForm.querySelectorAll('[data-non-credit]');
       const sync = () => {
         const isCredit = typeSel && typeSel.value === 'credit';
         creditBlocks.forEach((el) => { el.hidden = !isCredit; });
+        nonCreditBlocks.forEach((el) => { el.hidden = isCredit; });
       };
       if (typeSel) {
         typeSel.addEventListener('change', sync);
@@ -98,9 +100,11 @@
       if (f.dataset.toggleBound) return;
       const typeField = f.querySelector('select[name="account_type"]');
       const creditBlocks = f.querySelectorAll('[data-credit-only]');
+      const nonCreditBlocks = f.querySelectorAll('[data-non-credit]');
       const sync = () => {
         const isCredit = typeField && typeField.value === 'credit';
         creditBlocks.forEach((el) => { el.hidden = !isCredit; });
+        nonCreditBlocks.forEach((el) => { el.hidden = isCredit; });
       };
       if (typeField) {
         typeField.addEventListener('change', sync);
