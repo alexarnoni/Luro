@@ -24,6 +24,7 @@ from app.domain.categories.models import Category
 from app.domain.transactions.models import Transaction
 from app.domain.users.models import User  # noqa: F401
 from app.domain.rules.models import Rule  # noqa: F401
+from app.domain.goals.models import Goal  # noqa: F401
 
 PALETTE = [
     "#60a5fa", "#f472b6", "#22c55e", "#f59e0b", "#a78bfa",
