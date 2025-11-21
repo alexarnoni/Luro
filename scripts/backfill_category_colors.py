@@ -18,6 +18,8 @@ from app.core.config import settings
 from app.domain.users.models import User  # noqa: F401
 from app.domain.transactions.models import Transaction  # noqa: F401
 from app.domain.rules.models import Rule  # noqa: F401
+from app.domain.accounts.models import Account  # noqa: F401
+from app.domain.goals.models import Goal  # noqa: F401
 from app.domain.categories.models import Category
 
 PALETTE = [
