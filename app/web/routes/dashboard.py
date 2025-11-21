@@ -502,8 +502,6 @@ async def create_transaction(
     if tx_type not in ("income", "expense"):
         raise HTTPException(status_code=400, detail="Invalid transaction type")
 
-    account_id_int = _select_account_id()
-
     async def _resolve_category_id(name_val: str | None, cat_id_val: str | None) -> tuple[int | None, str | None]:
         """Return (category_id, category_name) handling existing IDs and quick creation.
 
@@ -553,6 +551,8 @@ async def create_transaction(
         db.add(new_cat)
         await db.flush()
         return new_cat.id, new_cat.name
+
+    account_id_int = _select_account_id()
 
     if payment_mode == "card":
         account = await get_user_account(db, user.id, account_id_int)
@@ -1131,6 +1131,14 @@ async def contribute_to_goal(
             return int(raw)
         except (TypeError, ValueError):
             raise HTTPException(status_code=400, detail="Selecione uma conta válida")
+
+    def _select_account_id() -> int:
+        # prefer explicit bank/card selects if provided, else fallback to hidden account_id
+        if bank_account_id not in (None, "", "null"):
+            return _parse_account_id(bank_account_id)
+        if card_account_id not in (None, "", "null"):
+            return _parse_account_id(card_account_id)
+        return _parse_account_id(account_id)
 
     def _select_account_id() -> int:
         # prefer explicit bank/card selects if provided, else fallback to hidden account_id
