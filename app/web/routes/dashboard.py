@@ -462,6 +462,8 @@ async def create_transaction(
     request: Request,
     payment_method: str = Form("account"),
     account_id: str | int = Form(...),
+    bank_account_id: str | None = Form(None),
+    card_account_id: str | None = Form(None),
     amount: str | float = Form(...),
     installments_total: int = Form(1),
     transaction_type: str = Form(...),
@@ -1128,4 +1130,12 @@ async def contribute_to_goal(
         except (TypeError, ValueError):
             raise HTTPException(status_code=400, detail="Selecione uma conta válida")
 
-    account_id_int = _parse_account_id(account_id)
+    def _select_account_id() -> int:
+        # prefer explicit bank/card selects if provided, else fallback to hidden account_id
+        if bank_account_id not in (None, "", "null"):
+            return _parse_account_id(bank_account_id)
+        if card_account_id not in (None, "", "null"):
+            return _parse_account_id(card_account_id)
+        return _parse_account_id(account_id)
+
+    account_id_int = _select_account_id()

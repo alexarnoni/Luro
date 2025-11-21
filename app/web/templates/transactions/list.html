@@ -25,7 +25,7 @@
 
         <div class="form-group" data-account-only>
             <label for="bank_account_id">{{ _('Conta') }}</label>
-            <select id="bank_account_id" class="form-control" aria-describedby="account-help">
+            <select id="bank_account_id" name="bank_account_id" class="form-control" aria-describedby="account-help">
                 <option value="">{{ _('Selecione uma conta') }}</option>
                 {% for account in accounts %}
                 <option value="{{ account.id }}">{{ account.name }}</option>
@@ -36,7 +36,7 @@
 
         <div class="form-group" data-card-only hidden>
             <label for="card_account_id">{{ _('Cartão') }}</label>
-            <select id="card_account_id" class="form-control" aria-describedby="card-help">
+            <select id="card_account_id" name="card_account_id" class="form-control" aria-describedby="card-help">
                 <option value="">{{ _('Selecione um cartão') }}</option>
                 {% for card in card_accounts %}
                 <option value="{{ card.id }}">{{ card.name }}</option>
