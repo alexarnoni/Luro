@@ -134,8 +134,24 @@ body[data-nav-open="true"] {
     font-weight: 700;
     text-decoration: none;
     color: var(--color-navbar-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
+.logo-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.3));
+    color: var(--color-primary);
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+}
 .nav-actions {
     display: flex;
     align-items: center;
