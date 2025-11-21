@@ -517,6 +517,13 @@ async def create_transaction(
             return _parse_account_id(card_account_id)
         return _parse_account_id(account_id)
 
+    def _pick_category_color(name_val: str) -> str:
+        palette = [
+            "#60a5fa", "#f472b6", "#22c55e", "#f59e0b", "#a78bfa",
+            "#38bdf8", "#fb7185", "#10b981", "#f97316", "#8b5cf6",
+        ]
+        return palette[abs(hash(name_val)) % len(palette)] if name_val else DEFAULT_CATEGORY_COLOR
+
     async def _resolve_category_id(name_val: str | None, cat_id_val: str | None) -> tuple[int | None, str | None]:
         """Return (category_id, category_name) handling existing IDs and quick creation.
 
@@ -562,6 +569,7 @@ async def create_transaction(
             user_id=user.id,
             name=name_clean,
             type=tx_type,
+            color=_pick_category_color(name_clean),
         )
         db.add(new_cat)
         await db.flush()
