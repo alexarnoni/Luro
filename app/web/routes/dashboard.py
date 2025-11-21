@@ -502,6 +502,14 @@ async def create_transaction(
     if tx_type not in ("income", "expense"):
         raise HTTPException(status_code=400, detail="Invalid transaction type")
 
+    def _parse_account_id(raw: str | int | None) -> int:
+        if raw in (None, "", "null"):
+            raise HTTPException(status_code=400, detail="Selecione uma conta válida")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Selecione uma conta válida")
+
     def _select_account_id() -> int:
         if bank_account_id not in (None, "", "null"):
             return _parse_account_id(bank_account_id)
