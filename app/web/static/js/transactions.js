@@ -108,16 +108,8 @@
 
     const syncCategoryInput = () => {
       if (!categorySelect || !newCategoryInput) return;
-      const noExisting = categorySelect.options.length <= 2; // only placeholder + new
-      if (noExisting && categorySelect.value !== '__new__') {
-        categorySelect.value = '__new__';
-      }
-      const isNew = categorySelect.value === '__new__' || noExisting;
-      newCategoryInput.hidden = !isNew;
-      newCategoryInput.style.display = isNew ? 'block' : 'none';
-      if (!isNew) {
-        newCategoryInput.value = '';
-      } else {
+      const isNew = categorySelect.value === '__new__';
+      if (isNew) {
         newCategoryInput.focus();
       }
     };
