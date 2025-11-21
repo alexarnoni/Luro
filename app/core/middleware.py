@@ -134,10 +134,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         try:
             session_identifier = parse_session_cookie(raw_session)
         except Exception:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid session"},
-            )
+            is_api = request.url.path.startswith("/api")
+            if is_api:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid session"},
+                )
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url="/login", status_code=303)
 
         content_type = (request.headers.get("content-type") or "").lower()
         is_json = "application/json" in content_type
@@ -151,10 +155,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         if not token or not csrf_manager.validate(token, session_identifier):
             logger.warning("Rejected request with invalid CSRF token on %s", request.url.path)
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "Invalid or missing CSRF token."},
-            )
+            is_api = request.url.path.startswith("/api")
+            if is_api:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Invalid or missing CSRF token."},
+                )
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url="/login", status_code=303)
 
         return await call_next(request)
 
