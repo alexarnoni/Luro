@@ -397,6 +397,8 @@ async def transactions_page(
     """Display transactions page."""
     accounts_result = await db.execute(select(Account).where(Account.user_id == user.id))
     accounts = accounts_result.scalars().all()
+    categories_result = await db.execute(select(Category).where(Category.user_id == user.id).order_by(Category.name))
+    categories = categories_result.scalars().all()
     bank_accounts = [acc for acc in accounts if acc.account_type != "credit"]
     card_accounts = [acc for acc in accounts if acc.account_type == "credit"]
 
@@ -439,6 +441,7 @@ async def transactions_page(
             "transactions": transactions,
             "card_charges": card_charges,
             "card_statements": card_statements,
+            "categories": categories,
         },
     )
 
@@ -453,6 +456,7 @@ async def create_transaction(
     transaction_type: str = Form(...),
     category: str = Form(None),
     category_id: int | None = Form(None),
+    new_category: str | None = Form(None),
     description: str = Form(None),
     transaction_date: str = Form(None),
     user: User = Depends(get_current_user),
@@ -497,6 +501,15 @@ async def create_transaction(
             if not category_obj:
                 raise HTTPException(status_code=404, detail="Category not found")
             category_pk = category_obj.id
+        elif new_category:
+            new_cat = Category(
+                user_id=user.id,
+                name=new_category.strip(),
+                type=tx_type,
+            )
+            db.add(new_cat)
+            await db.flush()
+            category_pk = new_cat.id
 
         await create_card_purchase(
             db=db,
@@ -532,6 +545,16 @@ async def create_transaction(
         category_pk = category_obj.id
         if not category_name:
             category_name = category_obj.name
+    elif new_category:
+        new_cat = Category(
+            user_id=user.id,
+            name=new_category.strip(),
+            type=tx_type,
+        )
+        db.add(new_cat)
+        await db.flush()
+        category_pk = new_cat.id
+        category_name = new_cat.name
     elif category_name:
         logger.warning(
             "Transaction created with legacy category string for user %s", user.id

@@ -79,6 +79,8 @@
     const amountInput = form.querySelector('#amount');
     const cardBlocks = form.querySelectorAll('[data-card-only]');
     const accountBlocks = form.querySelectorAll('[data-account-only]');
+    const categorySelect = form.querySelector('#category_id');
+    const newCategoryInput = form.querySelector('#new_category');
 
     const syncVisibility = () => {
       const mode = paymentSelect ? paymentSelect.value : 'account';
@@ -104,6 +106,15 @@
       }
     };
 
+    const syncCategoryInput = () => {
+      if (!categorySelect || !newCategoryInput) return;
+      const isNew = categorySelect.value === '__new__';
+      newCategoryInput.hidden = !isNew;
+      if (!isNew) {
+        newCategoryInput.value = '';
+      }
+    };
+
     paymentSelect && paymentSelect.addEventListener('change', syncVisibility);
     bankSelect && bankSelect.addEventListener('change', () => {
       if (accountHidden) accountHidden.value = bankSelect.value;
@@ -113,10 +124,12 @@
     });
     instTotal && instTotal.addEventListener('change', syncInstallmentAmount);
     amountInput && amountInput.addEventListener('blur', syncInstallmentAmount);
+    categorySelect && categorySelect.addEventListener('change', syncCategoryInput);
 
     form.addEventListener('submit', (ev) => {
       // ensure hidden account id is set
       syncVisibility();
+      syncCategoryInput();
       // if card and user filled parcel value, adjust amount = parcel * total
       const mode = paymentSelect ? paymentSelect.value : 'account';
       if (mode === 'card' && instTotal && instAmount && amountInput) {
@@ -126,9 +139,14 @@
           amountInput.value = String((per * totalInst).toFixed(2));
         }
       }
+      // if creating new category, ensure select value won't submit "__new__"
+      if (categorySelect && categorySelect.value === '__new__') {
+        categorySelect.name = 'category_id';
+      }
     });
 
     syncVisibility();
+    syncCategoryInput();
     form.dataset.bound = '1';
   }
 
