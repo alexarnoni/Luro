@@ -54,7 +54,7 @@
             {% if login_email_summary %}
             <ul class="status-list">
                 {% for row in login_email_summary %}
-                <li><strong>{{ row.email }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen }}</li>
+                <li><strong>{{ row.email }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen.strftime('%Y-%m-%d %H:%M:%S') if row.last_seen else '-' }}</li>
                 {% endfor %}
             </ul>
             {% else %}
@@ -66,7 +66,7 @@
             {% if login_ip_summary %}
             <ul class="status-list">
                 {% for row in login_ip_summary %}
-                <li><strong>{{ row.ip }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen }}</li>
+                <li><strong>{{ row.ip }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen.strftime('%Y-%m-%d %H:%M:%S') if row.last_seen else '-' }}</li>
                 {% endfor %}
             </ul>
             {% else %}
@@ -87,7 +87,7 @@
             <tbody>
                 {% for event in login_events %}
                 <tr>
-                    <td>{{ event.requested_at }}</td>
+                    <td>{{ event.requested_at.strftime('%Y-%m-%d %H:%M:%S') if event.requested_at else '-' }}</td>
                     <td>{{ event.email }}</td>
                     <td>{{ event.ip or '-' }}</td>
                 </tr>
