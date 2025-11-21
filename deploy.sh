@@ -14,11 +14,16 @@ git pull origin main
 
 echo "🐳 Build da imagem web..."
 docker compose -f docker-compose.prod.yml build web
+echo "🛑 Parando serviços atuais..."
+docker compose -f docker-compose.prod.yml down
 
 echo "🚀 Subindo containers..."
 docker compose -f docker-compose.prod.yml up -d
+echo "🚀 Reconstruindo e subindo os serviços..."
+docker compose -f docker-compose.prod.yml up --build -d
 
 echo "📦 Rodando migrations Alembic..."
 docker compose -f docker-compose.prod.yml exec -T web alembic -c /app/alembic.ini upgrade head || true
 
 echo "✨ Deploy completo!"
+echo "✅ Deploy completo!"
