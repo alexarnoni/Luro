@@ -149,12 +149,23 @@
         return monthLabelFormatter.format(date);
     }
 
+    function formatInsightMarkup(raw) {
+        if (!raw) return '';
+        // basic sanitization + markdown-lite for **bold** and line breaks
+        const escaped = raw
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        return withBold.replace(/\n/g, '<br>');
+    }
+
     function setInsightMessage(message, state = 'idle') {
         if (insightCard) {
             insightCard.dataset.state = state;
         }
         if (insightMessage) {
-            insightMessage.textContent = message || '';
+            insightMessage.innerHTML = formatInsightMarkup(message);
         }
     }
 
