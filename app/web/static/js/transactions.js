@@ -108,13 +108,12 @@
 
     const syncCategoryInput = () => {
       if (!categorySelect || !newCategoryInput) return;
-      const isNew = categorySelect.value === '__new__' || categorySelect.options.length <= 2;
-      if (isNew && categorySelect.value !== '__new__') {
-        categorySelect.value = '__new__';
-      }
+      const isNew = categorySelect.value === '__new__';
       newCategoryInput.hidden = !isNew;
       if (!isNew) {
         newCategoryInput.value = '';
+      } else {
+        newCategoryInput.focus();
       }
     };
 
@@ -142,9 +141,13 @@
           amountInput.value = String((per * totalInst).toFixed(2));
         }
       }
-      // if creating new category, ensure select value won't submit "__new__"
-      if (categorySelect && categorySelect.value === '__new__') {
-        categorySelect.name = 'category_id';
+      // if creating new category, require a value
+      if (categorySelect && newCategoryInput && categorySelect.value === '__new__') {
+        if (!newCategoryInput.value.trim()) {
+          ev.preventDefault();
+          newCategoryInput.focus();
+          return;
+        }
       }
     });
 
