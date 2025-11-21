@@ -35,6 +35,22 @@
             <input type="number" id="balance" name="balance" step="0.01" value="0" class="form-control">
         </div>
 
+        <div class="form-group grid-3" data-credit-only hidden>
+            <div>
+                <label for="credit_limit">{{ _('Limite (opcional)') }}</label>
+                <input type="number" id="credit_limit" name="credit_limit" step="0.01" class="form-control" aria-describedby="limit-help">
+            </div>
+            <div>
+                <label for="statement_day">{{ _('Dia de fechamento') }}</label>
+                <input type="number" id="statement_day" name="statement_day" min="1" max="28" class="form-control">
+            </div>
+            <div>
+                <label for="due_day">{{ _('Dia de vencimento') }}</label>
+                <input type="number" id="due_day" name="due_day" min="1" max="28" class="form-control">
+            </div>
+        </div>
+        <span class="form-hint" data-credit-only hidden id="limit-help">{{ _('Configure fechamento e vencimento para que as faturas funcionem corretamente. Limite é opcional, mas recomendável.') }}</span>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{{ _('Criar conta') }}</button>
             <button type="button" class="btn btn-secondary" data-close-target="#account-form">{{ _('Cancelar') }}</button>
@@ -49,6 +65,9 @@
             <h3 class="account-name">{{ account.name }}</h3>
             <p class="account-type">{{ {'checking': _('Conta corrente'), 'savings': _('Poupança'), 'credit': _('Cartão de crédito'), 'investment': _('Investimento'), 'other': _('Outro')}.get(account.account_type, account.account_type|title) }}</p>
             <p class="account-balance" data-account-id="{{ account.id }}">R$ {{ "%.2f"|format(account.balance) }}</p>
+            {% if account.account_type == 'credit' %}
+            <p class="account-meta">{{ _('Limite:') }} {{ account.credit_limit if account.credit_limit else _('Não informado') }} / {{ _('Fechamento:') }} {{ account.statement_day or '-' }} / {{ _('Vencimento:') }} {{ account.due_day or '-' }}</p>
+            {% endif %}
             <div class="account-actions">
                 <button type="button" class="btn btn-ghost" data-toggle-target="#account-edit-{{ account.id }}">{{ _('Editar') }}</button>
                 <button type="button" class="btn btn-danger" data-delete-account="{{ account.id }}">{{ _('Excluir') }}</button>
@@ -65,6 +84,22 @@
                         <label for="account-balance-{{ account.id }}">{{ _('Saldo') }}</label>
                         <input id="account-balance-{{ account.id }}" name="balance" class="form-control" required value="{{ '%.2f'|format(account.balance) }}">
                     </div>
+                    {% if account.account_type == 'credit' %}
+                    <div class="form-group grid-3">
+                        <div>
+                            <label for="credit-limit-{{ account.id }}">{{ _('Limite') }}</label>
+                            <input id="credit-limit-{{ account.id }}" name="credit_limit" step="0.01" class="form-control" value="{{ account.credit_limit if account.credit_limit is not none else '' }}">
+                        </div>
+                        <div>
+                            <label for="statement-day-{{ account.id }}">{{ _('Fechamento') }}</label>
+                            <input id="statement-day-{{ account.id }}" name="statement_day" min="1" max="28" class="form-control" value="{{ account.statement_day or '' }}">
+                        </div>
+                        <div>
+                            <label for="due-day-{{ account.id }}">{{ _('Vencimento') }}</label>
+                            <input id="due-day-{{ account.id }}" name="due_day" min="1" max="28" class="form-control" value="{{ account.due_day or '' }}">
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">{{ _('Salvar') }}</button>
                         <button type="button" class="btn btn-secondary" data-close-target="#account-edit-{{ account.id }}">{{ _('Cancelar') }}</button>

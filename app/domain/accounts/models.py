@@ -15,6 +15,9 @@ class Account(Base):
     account_type = Column(String, nullable=False)  # checking, savings, credit, etc.
     balance = Column(Float, default=0.0)
     currency = Column(String, default="USD")
+    credit_limit = Column(Float, nullable=True)
+    statement_day = Column(Integer, nullable=True)  # 1-28 typically
+    due_day = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

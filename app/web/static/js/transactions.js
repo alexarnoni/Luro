@@ -67,7 +67,73 @@
     }
   }
 
+  function bindTransactionCreate() {
+    const form = document.getElementById('transaction-create-form');
+    if (!form || form.dataset.bound) return;
+    const paymentSelect = form.querySelector('#payment_method');
+    const bankSelect = form.querySelector('#bank_account_id');
+    const cardSelect = form.querySelector('#card_account_id');
+    const accountHidden = form.querySelector('#account_id');
+    const instTotal = form.querySelector('#installments_total');
+    const instAmount = form.querySelector('#amount_per_installment');
+    const amountInput = form.querySelector('#amount');
+    const cardBlocks = form.querySelectorAll('[data-card-only]');
+    const accountBlocks = form.querySelectorAll('[data-account-only]');
+
+    const syncVisibility = () => {
+      const mode = paymentSelect ? paymentSelect.value : 'account';
+      const isCard = mode === 'card';
+      cardBlocks.forEach((el) => { el.hidden = !isCard; });
+      accountBlocks.forEach((el) => { el.hidden = isCard; });
+      if (accountHidden) {
+        if (isCard) {
+          accountHidden.value = cardSelect ? cardSelect.value : '';
+        } else {
+          accountHidden.value = bankSelect ? bankSelect.value : '';
+        }
+      }
+    };
+
+    const syncInstallmentAmount = () => {
+      if (!instTotal || !amountInput || !instAmount) return;
+      const totalVal = parseMoney(amountInput.value);
+      const totalInst = Number(instTotal.value || '1');
+      if (totalVal !== null && totalInst > 0) {
+        const per = totalVal / totalInst;
+        instAmount.value = per.toFixed(2);
+      }
+    };
+
+    paymentSelect && paymentSelect.addEventListener('change', syncVisibility);
+    bankSelect && bankSelect.addEventListener('change', () => {
+      if (accountHidden) accountHidden.value = bankSelect.value;
+    });
+    cardSelect && cardSelect.addEventListener('change', () => {
+      if (accountHidden) accountHidden.value = cardSelect.value;
+    });
+    instTotal && instTotal.addEventListener('change', syncInstallmentAmount);
+    amountInput && amountInput.addEventListener('blur', syncInstallmentAmount);
+
+    form.addEventListener('submit', (ev) => {
+      // ensure hidden account id is set
+      syncVisibility();
+      // if card and user filled parcel value, adjust amount = parcel * total
+      const mode = paymentSelect ? paymentSelect.value : 'account';
+      if (mode === 'card' && instTotal && instAmount && amountInput) {
+        const per = parseMoney(instAmount.value);
+        const totalInst = Number(instTotal.value || '1');
+        if (per !== null && totalInst > 0) {
+          amountInput.value = String((per * totalInst).toFixed(2));
+        }
+      }
+    });
+
+    syncVisibility();
+    form.dataset.bound = '1';
+  }
+
   function init() {
+    bindTransactionCreate();
     document.querySelectorAll('form.txn-edit-form-ajax').forEach((f) => {
       if (f.dataset.luroBound) return;
       f.addEventListener('submit', handleSubmit);

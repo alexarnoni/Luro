@@ -12,16 +12,37 @@
 
 <section id="transaction-form" class="form-card" hidden aria-hidden="true">
     <h2>{{ _('Adicionar nova transação') }}</h2>
-    <form method="post" action="/transactions">
+    <form method="post" action="/transactions" id="transaction-create-form">
+        <input type="hidden" name="account_id" id="account_id" value="">
         <div class="form-group">
-            <label for="account_id">{{ _('Conta') }}</label>
-            <select id="account_id" name="account_id" required class="form-control" aria-describedby="account-help">
+            <label for="payment_method">{{ _('Forma de pagamento') }}</label>
+            <select id="payment_method" name="payment_method" class="form-control" aria-describedby="payment-help">
+                <option value="account">{{ _('Conta (débito)') }}</option>
+                <option value="card">{{ _('Cartão de crédito') }}</option>
+            </select>
+            <span class="form-hint" id="payment-help">{{ _('Escolha se é lançamento direto em conta ou compra no cartão.') }}</span>
+        </div>
+
+        <div class="form-group" data-account-only>
+            <label for="bank_account_id">{{ _('Conta') }}</label>
+            <select id="bank_account_id" class="form-control" aria-describedby="account-help">
                 <option value="">{{ _('Selecione uma conta') }}</option>
                 {% for account in accounts %}
                 <option value="{{ account.id }}">{{ account.name }}</option>
                 {% endfor %}
             </select>
             <span class="form-hint" id="account-help">{{ _('Escolha a conta onde o lançamento será registrado.') }}</span>
+        </div>
+
+        <div class="form-group" data-card-only hidden>
+            <label for="card_account_id">{{ _('Cartão') }}</label>
+            <select id="card_account_id" class="form-control" aria-describedby="card-help">
+                <option value="">{{ _('Selecione um cartão') }}</option>
+                {% for card in card_accounts %}
+                <option value="{{ card.id }}">{{ card.name }}</option>
+                {% endfor %}
+            </select>
+            <span class="form-hint" id="card-help">{{ _('Compras no cartão não alteram o saldo das contas. Configure fechamento e vencimento no cadastro do cartão.') }}</span>
         </div>
 
         <div class="form-group">
@@ -36,6 +57,18 @@
             <label for="amount">{{ _('Valor') }}</label>
             <input type="number" id="amount" name="amount" step="0.01" min="0" required class="form-control" placeholder="0.00" aria-describedby="amount-help">
             <span class="form-hint" id="amount-help">{{ _('Insira valores positivos; o tipo determina se é despesa ou receita.') }}</span>
+        </div>
+
+        <div class="form-group grid-2" data-card-only hidden>
+            <div>
+                <label for="installments_total">{{ _('Número de parcelas') }}</label>
+                <input type="number" id="installments_total" name="installments_total" min="1" value="1" class="form-control">
+            </div>
+            <div>
+                <label for="amount_per_installment">{{ _('Valor da parcela (opcional)') }}</label>
+                <input type="number" id="amount_per_installment" step="0.01" min="0" class="form-control" aria-describedby="inst-help">
+                <span class="form-hint" id="inst-help">{{ _('Preenche usar o valor total ÷ parcelas; edite se precisar arredondar.') }}</span>
+            </div>
         </div>
 
         <div class="form-group">
@@ -125,6 +158,92 @@
             <button type="button" class="btn btn-primary" data-toggle-target="#transaction-form" data-toggle-focus="#account_id" aria-controls="transaction-form" aria-expanded="false">{{ _('Adicionar transação') }}</button>
             <a class="btn btn-ghost" href="/transactions" aria-label="{{ _('Importar transações') }}">{{ _('Importar CSV/OFX') }}</a>
         </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="transactions-table">
+    <div class="page-header">
+        <h2>{{ _('Compras em cartão') }}</h2>
+    </div>
+    {% if card_charges %}
+    <table>
+        <thead>
+            <tr>
+                <th>{{ _('Data') }}</th>
+                <th>{{ _('Cartão') }}</th>
+                <th>{{ _('Parcela') }}</th>
+                <th>{{ _('Descrição') }}</th>
+                <th>{{ _('Valor') }}</th>
+                <th>{{ _('Fatura') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for charge in card_charges %}
+            <tr>
+                <td>{{ charge.purchase_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ charge.account.name }}</td>
+                <td>{{ charge.installment_number }}/{{ charge.installment_total }}</td>
+                <td>{{ charge.description or '-' }}</td>
+                <td class="{% if charge.amount >=0 %}negative{% endif %}">R$ {{ '%.2f'|format(charge.amount) }}</td>
+                <td>{% if charge.statement %}{{ '%02d/%04d'|format(charge.statement.month, charge.statement.year) }} ({{ charge.statement.status }}){% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" role="status" aria-live="polite">
+        <p>{{ _('Sem compras em cartão ainda.') }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="transactions-table">
+    <div class="page-header">
+        <h2>{{ _('Faturas de cartão') }}</h2>
+    </div>
+    {% if card_statements %}
+    <table>
+        <thead>
+            <tr>
+                <th>{{ _('Referência') }}</th>
+                <th>{{ _('Cartão') }}</th>
+                <th>{{ _('Fechamento') }}</th>
+                <th>{{ _('Vencimento') }}</th>
+                <th>{{ _('Valor devido') }}</th>
+                <th>{{ _('Pago') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Ações') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stmt in card_statements %}
+            <tr>
+                <td>{{ '%02d/%04d'|format(stmt.month, stmt.year) }}</td>
+                <td>{{ stmt.account.name }}</td>
+                <td>{{ stmt.close_date }}</td>
+                <td>{{ stmt.due_date }}</td>
+                <td>R$ {{ '%.2f'|format(stmt.amount_due or 0) }}</td>
+                <td>R$ {{ '%.2f'|format(stmt.amount_paid or 0) }}</td>
+                <td>{{ stmt.status }}</td>
+                <td>
+                    <form action="/cards/{{ stmt.account_id }}/statements/{{ stmt.id }}/pay" method="post" class="inline-form">
+                        <input type="number" step="0.01" name="amount" placeholder="{{ _('Valor pago') }}" class="form-control" required>
+                        <button type="submit" class="btn btn-primary btn-small">{{ _('Registrar pagamento') }}</button>
+                    </form>
+                    <form action="/cards/{{ stmt.account_id }}/statements/{{ stmt.id }}/adjust" method="post" class="inline-form">
+                        <input type="number" step="0.01" name="amount" placeholder="{{ _('Ajuste/Estorno') }}" class="form-control" required>
+                        <input type="text" name="description" placeholder="{{ _('Descrição') }}" class="form-control">
+                        <button type="submit" class="btn btn-secondary btn-small">{{ _('Ajustar') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" role="status" aria-live="polite">
+        <p>{{ _('Sem faturas abertas ou fechadas ainda.') }}</p>
     </div>
     {% endif %}
 </div>

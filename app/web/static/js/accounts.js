@@ -52,8 +52,12 @@
       if (row) {
         const nameEl = row.querySelector('.account-name');
         const balanceEl = row.querySelector('.account-balance');
+        const metaEl = row.querySelector('.account-meta');
         if (nameEl) nameEl.textContent = json.name;
         if (balanceEl) balanceEl.textContent = '$' + Number(json.balance).toFixed(2);
+        if (metaEl && json.account_type === 'credit') {
+          metaEl.textContent = `Limit: ${json.credit_limit ?? 'N/A'} / Close: ${json.statement_day ?? '-'} / Due: ${json.due_day ?? '-'}`;
+        }
       }
       // close form
       const section = form.closest('section');
@@ -73,6 +77,36 @@
       if (f.dataset.luroBound) return;
       f.addEventListener('submit', handleSubmit);
       f.dataset.luroBound = '1';
+    });
+    // credit field toggles (create)
+    const createForm = document.querySelector('#account-form form');
+    if (createForm && !createForm.dataset.toggleBound) {
+      const typeSel = createForm.querySelector('#account_type');
+      const creditBlocks = createForm.querySelectorAll('[data-credit-only]');
+      const sync = () => {
+        const isCredit = typeSel && typeSel.value === 'credit';
+        creditBlocks.forEach((el) => { el.hidden = !isCredit; });
+      };
+      if (typeSel) {
+        typeSel.addEventListener('change', sync);
+        sync();
+      }
+      createForm.dataset.toggleBound = '1';
+    }
+    // credit field toggles (edit)
+    document.querySelectorAll('form.account-edit-form-ajax').forEach((f) => {
+      if (f.dataset.toggleBound) return;
+      const typeField = f.querySelector('select[name="account_type"]');
+      const creditBlocks = f.querySelectorAll('[data-credit-only]');
+      const sync = () => {
+        const isCredit = typeField && typeField.value === 'credit';
+        creditBlocks.forEach((el) => { el.hidden = !isCredit; });
+      };
+      if (typeField) {
+        typeField.addEventListener('change', sync);
+        sync();
+      }
+      f.dataset.toggleBound = '1';
     });
     // bind delete buttons
     document.querySelectorAll('button[data-delete-account]').forEach((btn) => {

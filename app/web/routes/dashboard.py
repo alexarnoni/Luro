@@ -1,11 +1,12 @@
 import logging
+from datetime import datetime, date
+from calendar import monthrange
 
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, delete
-from datetime import datetime
+from sqlalchemy import select, desc, delete, func
 
 from app.core.config import settings
 from app.core.cookies import SESSION_COOKIE_NAME
@@ -18,7 +19,7 @@ from app.domain.accounts.models import Account
 from app.domain.transactions.models import Transaction
 from app.domain.categories.models import Category
 from app.domain.goals.models import Goal
-from app.domain.accounts.models import Account
+from app.domain.cards.models import CardCharge, CardStatement
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,224 @@ templates.env.globals.setdefault(
     "is_admin",
     lambda user: bool(user and getattr(user, "email", None) and user.email.lower() in settings.admin_emails),
 )
+
+
+def add_months(dt: datetime, months: int) -> datetime:
+    """Return datetime advanced by N months (keeps day when possible)."""
+    month = dt.month - 1 + months
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    day = min(dt.day, monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+
+def compute_close_date(purchase_dt: datetime, statement_day: int) -> date:
+    """Compute close date for a purchase; purchase on closing day goes to next cycle."""
+    if statement_day is None:
+        raise HTTPException(status_code=400, detail="Defina o dia de fechamento do cartão antes de lançar compras")
+    # purchase exactly on closing day vai para próxima fatura
+    if purchase_dt.day >= statement_day:
+        target = add_months(purchase_dt.replace(day=statement_day), 1)
+    else:
+        target = purchase_dt.replace(day=statement_day)
+    return target.date()
+
+
+def compute_due_date(close_dt: date, due_day: int | None) -> date:
+    """Compute due date ensuring it is after close date."""
+    if due_day is None:
+        raise HTTPException(status_code=400, detail="Defina o dia de vencimento do cartão antes de lançar compras")
+    y, m = close_dt.year, close_dt.month
+    last_day = monthrange(y, m)[1]
+    day = min(due_day, last_day)
+    candidate = date(y, m, day)
+    if candidate <= close_dt:
+        nxt = add_months(datetime.combine(close_dt, datetime.min.time()), 1)
+        y2, m2 = nxt.year, nxt.month
+        last2 = monthrange(y2, m2)[1]
+        candidate = date(y2, m2, min(due_day, last2))
+    return candidate
+
+
+async def get_user_account(db: AsyncSession, user_id: int, account_id: int) -> Account:
+    result = await db.execute(
+        select(Account).where(Account.id == account_id, Account.user_id == user_id)
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
+
+
+async def get_or_create_statement(
+    db: AsyncSession, account: Account, close_dt: date
+) -> CardStatement:
+    """Get or create statement for the given close date."""
+    result = await db.execute(
+        select(CardStatement).where(
+            CardStatement.account_id == account.id,
+            CardStatement.close_date == close_dt,
+        )
+    )
+    statement = result.scalar_one_or_none()
+    if statement:
+        return statement
+
+    due_dt = compute_due_date(close_dt, account.due_day)
+    stmt = CardStatement(
+        account_id=account.id,
+        year=close_dt.year,
+        month=close_dt.month,
+        close_date=close_dt,
+        due_date=due_dt,
+        status="open",
+        amount_due=0.0,
+        amount_paid=0.0,
+    )
+    db.add(stmt)
+    await db.flush()
+    return stmt
+
+
+async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> float:
+    res = await db.execute(
+        select(func.coalesce(func.sum(CardCharge.amount), 0)).where(
+            CardCharge.statement_id == statement_id
+        )
+    )
+    total = res.scalar()
+    return float(total or 0.0)
+
+
+async def close_card_statements(db: AsyncSession, account: Account, today: date) -> None:
+    """Close any open statements whose close_date has passed and roll balance forward."""
+    result = await db.execute(
+        select(CardStatement)
+        .where(CardStatement.account_id == account.id)
+        .order_by(CardStatement.close_date)
+    )
+    statements = result.scalars().all()
+
+    for stmt in statements:
+        if stmt.status == "paid":
+            continue
+        if stmt.close_date > today:
+            continue
+
+        # recompute totals
+        stmt.amount_due = await _sum_statement_charges(db, stmt.id)
+        # status
+        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
+        if outstanding <= 0:
+            stmt.status = "paid"
+        else:
+            stmt.status = "overdue" if today > stmt.due_date else "closed"
+
+        # roll forward if needed and not yet applied
+        if outstanding > 0 and not stmt.carry_applied:
+            next_close_dt = add_months(
+                datetime.combine(stmt.close_date, datetime.min.time()), 1
+            ).date()
+            next_statement = await get_or_create_statement(db, account, next_close_dt)
+            adj = CardCharge(
+                account_id=account.id,
+                statement_id=next_statement.id,
+                purchase_date=datetime.combine(today, datetime.min.time()),
+                amount=outstanding,
+                description=f"Saldo anterior {stmt.close_date.strftime('%m/%Y')}",
+                installment_number=1,
+                installment_total=1,
+                is_adjustment=True,
+            )
+            db.add(adj)
+            stmt.carry_applied = True
+            stmt.amount_paid = stmt.amount_due  # mark as settled via carry-over
+            stmt.status = "paid"
+
+        db.add(stmt)
+    await db.flush()
+
+
+async def apply_card_payment(
+    db: AsyncSession, account: Account, amount: float, payment_date: datetime
+) -> CardStatement | None:
+    """Apply a payment to the oldest open statements; returns the latest touched statement."""
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be positive")
+
+    await close_card_statements(db, account, payment_date.date())
+
+    res = await db.execute(
+        select(CardStatement)
+        .where(CardStatement.account_id == account.id)
+        .order_by(CardStatement.close_date)
+    )
+    statements = res.scalars().all()
+    remaining = amount
+    last_touched = None
+    for stmt in statements:
+        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
+        if outstanding <= 0:
+            continue
+        applied = min(remaining, outstanding)
+        stmt.amount_paid = (stmt.amount_paid or 0.0) + applied
+        remaining -= applied
+        last_touched = stmt
+
+        # recalc status
+        outstanding_after = stmt.amount_due - stmt.amount_paid
+        if outstanding_after <= 0:
+            stmt.status = "paid"
+        else:
+            stmt.status = "overdue" if payment_date.date() > stmt.due_date else "closed"
+
+        db.add(stmt)
+        if remaining <= 0:
+            break
+
+    if remaining > 0 and statements:
+        # nothing to pay, allow creating a negative adjustment in current cycle
+        current_stmt = statements[-1]
+        current_stmt.amount_paid = (current_stmt.amount_paid or 0.0) + remaining
+        current_stmt.status = "paid" if current_stmt.amount_paid >= current_stmt.amount_due else current_stmt.status
+        db.add(current_stmt)
+        last_touched = current_stmt
+
+    await db.flush()
+    return last_touched
+
+
+async def create_card_purchase(
+    db: AsyncSession,
+    account: Account,
+    purchase_dt: datetime,
+    total_amount: float,
+    installments_total: int,
+    description: str | None,
+    category_id: int | None,
+) -> None:
+    if installments_total < 1:
+        raise HTTPException(status_code=400, detail="Total de parcelas inválido")
+    if total_amount <= 0:
+        raise HTTPException(status_code=400, detail="Valor deve ser positivo")
+    per_installment = total_amount / installments_total
+
+    for i in range(installments_total):
+        parcel_dt = add_months(purchase_dt, i)
+        close_dt = compute_close_date(parcel_dt, account.statement_day)
+        statement = await get_or_create_statement(db, account, close_dt)
+        charge = CardCharge(
+            account_id=account.id,
+            statement_id=statement.id,
+            purchase_date=parcel_dt,
+            amount=per_installment,
+            description=description or "Compra cartão",
+            category_id=category_id,
+            installment_number=i + 1,
+            installment_total=installments_total,
+        )
+        db.add(charge)
+    await db.flush()
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -103,6 +322,9 @@ async def create_account(
     name: str = Form(...),
     account_type: str = Form(...),
     balance: str | float = Form(0.0),
+    credit_limit: str | float | None = Form(None),
+    statement_day: int | None = Form(None),
+    due_day: int | None = Form(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -119,11 +341,28 @@ async def create_account(
     if bal_val < 0:
         raise HTTPException(status_code=400, detail="Initial balance cannot be negative")
 
+    credit_limit_val = None
+    if credit_limit not in (None, ""):
+        try:
+            credit_limit_val = float(credit_limit)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid credit limit")
+
+    statement_day_val = None
+    due_day_val = None
+    if statement_day not in (None, ""):
+        statement_day_val = int(statement_day)
+    if due_day not in (None, ""):
+        due_day_val = int(due_day)
+
     account = Account(
         user_id=user.id,
         name=name.strip(),
         account_type=account_type.strip(),
-        balance=bal_val
+        balance=bal_val,
+        credit_limit=credit_limit_val,
+        statement_day=statement_day_val,
+        due_day=due_day_val,
     )
     db.add(account)
     try:
@@ -142,37 +381,61 @@ async def transactions_page(
     db: AsyncSession = Depends(get_db)
 ):
     """Display transactions page."""
-    # Get user's accounts
-    accounts_result = await db.execute(
-        select(Account).where(Account.user_id == user.id)
-    )
+    accounts_result = await db.execute(select(Account).where(Account.user_id == user.id))
     accounts = accounts_result.scalars().all()
-    
-    # Get transactions
+    bank_accounts = [acc for acc in accounts if acc.account_type != "credit"]
+    card_accounts = [acc for acc in accounts if acc.account_type == "credit"]
+
+    today = date.today()
+    for card in card_accounts:
+        if card.statement_day and card.due_day:
+            await close_card_statements(db, card, today)
+
     transactions_result = await db.execute(
         select(Transaction)
         .join(Account)
-        .where(Account.user_id == user.id)
+        .where(Account.user_id == user.id, Account.account_type != "credit")
         .order_by(desc(Transaction.transaction_date))
     )
     transactions = transactions_result.scalars().all()
-    
+
+    charges_result = await db.execute(
+        select(CardCharge)
+        .join(Account)
+        .where(Account.user_id == user.id, Account.account_type == "credit")
+        .order_by(desc(CardCharge.purchase_date))
+    )
+    card_charges = charges_result.scalars().all()
+
+    statements_result = await db.execute(
+        select(CardStatement)
+        .join(Account)
+        .where(Account.user_id == user.id, Account.account_type == "credit")
+        .order_by(desc(CardStatement.close_date))
+    )
+    card_statements = statements_result.scalars().all()
+
     return templates.TemplateResponse(
         "transactions/list.html",
         {
             "request": request,
             "user": user,
-            "accounts": accounts,
-            "transactions": transactions
-        }
+            "accounts": bank_accounts,
+            "card_accounts": card_accounts,
+            "transactions": transactions,
+            "card_charges": card_charges,
+            "card_statements": card_statements,
+        },
     )
 
 
 @router.post("/transactions")
 async def create_transaction(
     request: Request,
+    payment_method: str = Form("account"),
     account_id: int = Form(...),
     amount: str | float = Form(...),
+    installments_total: int = Form(1),
     transaction_type: str = Form(...),
     category: str = Form(None),
     category_id: int | None = Form(None),
@@ -182,18 +445,8 @@ async def create_transaction(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new transaction."""
-    # Verify account belongs to user
-    account_result = await db.execute(
-        select(Account).where(
-            Account.id == account_id,
-            Account.user_id == user.id
-        )
-    )
-    account = account_result.scalar_one_or_none()
-    
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
-    
+    payment_mode = (payment_method or "account").strip().lower()
+
     # Parse date
     trans_date = datetime.utcnow()
     if transaction_date:
@@ -201,6 +454,54 @@ async def create_transaction(
             trans_date = datetime.fromisoformat(transaction_date)
         except ValueError:
             pass
+
+    # parse amount robustly
+    try:
+        if isinstance(amount, (int, float)):
+            amt = float(amount)
+        else:
+            amt, _warnings = parse_money(amount)
+    except HTTPException as exc:
+        raise HTTPException(status_code=400, detail=str(exc.detail))
+
+    if amt == 0:
+        raise HTTPException(status_code=400, detail="Amount must be non-zero")
+
+    if payment_mode == "card":
+        account = await get_user_account(db, user.id, account_id)
+        if account.account_type != "credit":
+            raise HTTPException(status_code=400, detail="Selecione um cartão de crédito válido")
+        if account.statement_day is None or account.due_day is None:
+            raise HTTPException(status_code=400, detail="Configure fechamento e vencimento do cartão antes de lançar compras")
+
+        category_pk = None
+        if category_id is not None:
+            result = await db.execute(
+                select(Category).where(Category.id == category_id, Category.user_id == user.id)
+            )
+            category_obj = result.scalar_one_or_none()
+            if not category_obj:
+                raise HTTPException(status_code=404, detail="Category not found")
+            category_pk = category_obj.id
+
+        await create_card_purchase(
+            db=db,
+            account=account,
+            purchase_dt=trans_date,
+            total_amount=abs(amt),
+            installments_total=installments_total,
+            description=description,
+            category_id=category_pk,
+        )
+        await close_card_statements(db, account, date.today())
+        await db.commit()
+        return RedirectResponse(url="/transactions", status_code=303)
+
+    # Debit/credit (conta) flow
+    account = await get_user_account(db, user.id, account_id)
+    if account.account_type == "credit":
+        raise HTTPException(status_code=400, detail="Use o modo cartão para lançar compras de crédito")
+
     category_name = category.strip() if category else None
     category_pk = None
 
@@ -221,18 +522,6 @@ async def create_transaction(
         logger.warning(
             "Transaction created with legacy category string for user %s", user.id
         )
-
-    # parse amount robustly
-    try:
-        if isinstance(amount, (int, float)):
-            amt = float(amount)
-        else:
-            amt, _warnings = parse_money(amount)
-    except HTTPException as exc:
-        raise HTTPException(status_code=400, detail=str(exc.detail))
-
-    if amt == 0:
-        raise HTTPException(status_code=400, detail="Amount must be non-zero")
 
     tx_type = transaction_type.strip().lower()
     if tx_type not in ("income", "expense"):
@@ -264,6 +553,117 @@ async def create_transaction(
         await db.rollback()
         raise HTTPException(status_code=500, detail="Unable to create transaction")
 
+    return RedirectResponse(url="/transactions", status_code=303)
+
+
+@router.post("/cards/{card_id}/statements/{statement_id}/pay")
+async def pay_card_statement(
+    request: Request,
+    card_id: int,
+    statement_id: int,
+    amount: str | float = Form(...),
+    payment_date: str | None = Form(None),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Register a payment for a credit card statement (does not touch bank accounts)."""
+    account = await get_user_account(db, user.id, card_id)
+    if account.account_type != "credit":
+        raise HTTPException(status_code=400, detail="Conta selecionada não é um cartão")
+
+    stmt_res = await db.execute(
+        select(CardStatement).where(
+            CardStatement.id == statement_id, CardStatement.account_id == account.id
+        )
+    )
+    statement = stmt_res.scalar_one_or_none()
+    if not statement:
+        raise HTTPException(status_code=404, detail="Fatura não encontrada")
+
+    pay_dt = datetime.utcnow()
+    if payment_date:
+        try:
+            pay_dt = datetime.fromisoformat(payment_date)
+        except ValueError:
+            pass
+
+    try:
+        pay_amount = float(amount) if isinstance(amount, (int, float)) else parse_money(amount)[0]
+    except HTTPException as exc:
+        raise HTTPException(status_code=400, detail=str(exc.detail))
+
+    touched = await apply_card_payment(db, account, pay_amount, pay_dt)
+    await db.commit()
+
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept:
+        return JSONResponse(
+            {
+                "statement_id": statement.id,
+                "amount_paid": float(touched.amount_paid if touched else 0.0),
+            }
+        )
+    return RedirectResponse(url="/transactions", status_code=303)
+
+
+@router.post("/cards/{card_id}/statements/{statement_id}/adjust")
+async def adjust_card_statement(
+    request: Request,
+    card_id: int,
+    statement_id: int,
+    amount: str | float = Form(...),
+    description: str | None = Form("Ajuste"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add an adjustment (e.g., estorno) to an open card statement."""
+    account = await get_user_account(db, user.id, card_id)
+    if account.account_type != "credit":
+        raise HTTPException(status_code=400, detail="Conta selecionada não é um cartão")
+
+    stmt_res = await db.execute(
+        select(CardStatement).where(
+            CardStatement.id == statement_id, CardStatement.account_id == account.id
+        )
+    )
+    statement = stmt_res.scalar_one_or_none()
+    if not statement:
+        raise HTTPException(status_code=404, detail="Fatura não encontrada")
+    if statement.status == "paid":
+        raise HTTPException(status_code=400, detail="Fatura já está quitada")
+
+    try:
+        adj_amount = float(amount) if isinstance(amount, (int, float)) else parse_money(amount)[0]
+    except HTTPException as exc:
+        raise HTTPException(status_code=400, detail=str(exc.detail))
+
+    adj_charge = CardCharge(
+        account_id=account.id,
+        statement_id=statement.id,
+        purchase_date=datetime.utcnow(),
+        amount=adj_amount,
+        description=description or "Ajuste",
+        installment_number=1,
+        installment_total=1,
+        is_adjustment=True,
+    )
+    db.add(adj_charge)
+
+    # refresh statement totals
+    statement.amount_due = await _sum_statement_charges(db, statement.id)
+    statement.status = "paid" if statement.amount_paid >= statement.amount_due else statement.status
+    db.add(statement)
+    await db.commit()
+
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept:
+        return JSONResponse(
+            {
+                "statement_id": statement.id,
+                "amount_due": float(statement.amount_due),
+                "amount_paid": float(statement.amount_paid),
+            }
+        )
     return RedirectResponse(url="/transactions", status_code=303)
 
 
@@ -325,6 +725,9 @@ async def edit_account(
     account_id: int,
     name: str = Form(...),
     balance: str | float = Form(...),
+    credit_limit: str | float | None = Form(None),
+    statement_day: int | None = Form(None),
+    due_day: int | None = Form(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -346,8 +749,26 @@ async def edit_account(
     if bal_val < 0:
         raise HTTPException(status_code=400, detail="Balance cannot be negative")
 
+    credit_limit_val = None
+    if credit_limit not in (None, ""):
+        try:
+            credit_limit_val = float(credit_limit)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid credit limit")
+
+    statement_day_val = None
+    due_day_val = None
+    if statement_day not in (None, ""):
+        statement_day_val = int(statement_day)
+    if due_day not in (None, ""):
+        due_day_val = int(due_day)
+
     account.name = name.strip()
     account.balance = bal_val
+    if account.account_type == "credit":
+        account.credit_limit = credit_limit_val
+        account.statement_day = statement_day_val
+        account.due_day = due_day_val
     db.add(account)
     try:
         await db.commit()
@@ -358,7 +779,17 @@ async def edit_account(
     accept = request.headers.get('accept', '')
     is_xhr = request.headers.get('x-requested-with', '') == 'XMLHttpRequest'
     if 'application/json' in accept or is_xhr:
-        return JSONResponse({'id': account.id, 'name': account.name, 'balance': float(account.balance)})
+        return JSONResponse(
+            {
+                'id': account.id,
+                'name': account.name,
+                'balance': float(account.balance),
+                'account_type': account.account_type,
+                'credit_limit': float(account.credit_limit) if account.credit_limit is not None else None,
+                'statement_day': account.statement_day,
+                'due_day': account.due_day,
+            }
+        )
 
     return RedirectResponse(url="/accounts", status_code=303)
 
