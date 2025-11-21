@@ -108,7 +108,10 @@
 
     const syncCategoryInput = () => {
       if (!categorySelect || !newCategoryInput) return;
-      const isNew = categorySelect.value === '__new__';
+      const isNew = categorySelect.value === '__new__' || categorySelect.options.length <= 2;
+      if (isNew && categorySelect.value !== '__new__') {
+        categorySelect.value = '__new__';
+      }
       newCategoryInput.hidden = !isNew;
       if (!isNew) {
         newCategoryInput.value = '';

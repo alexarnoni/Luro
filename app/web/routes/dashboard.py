@@ -455,7 +455,7 @@ async def create_transaction(
     installments_total: int = Form(1),
     transaction_type: str = Form(...),
     category: str = Form(None),
-    category_id: int | None = Form(None),
+    category_id: str | None = Form(None),
     new_category: str | None = Form(None),
     description: str = Form(None),
     transaction_date: str = Form(None),
@@ -493,9 +493,13 @@ async def create_transaction(
             raise HTTPException(status_code=400, detail="Configure fechamento e vencimento do cartão antes de lançar compras")
 
         category_pk = None
-        if category_id is not None:
+        if category_id is not None and category_id != "__new__":
+            try:
+                category_pk_int = int(category_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Categoria inválida")
             result = await db.execute(
-                select(Category).where(Category.id == category_id, Category.user_id == user.id)
+                select(Category).where(Category.id == category_pk_int, Category.user_id == user.id)
             )
             category_obj = result.scalar_one_or_none()
             if not category_obj:
@@ -505,6 +509,16 @@ async def create_transaction(
             new_cat = Category(
                 user_id=user.id,
                 name=new_category.strip(),
+                type=tx_type,
+            )
+            db.add(new_cat)
+            await db.flush()
+            category_pk = new_cat.id
+        elif category:
+            # fallback: text-only category
+            new_cat = Category(
+                user_id=user.id,
+                name=category.strip(),
                 type=tx_type,
             )
             db.add(new_cat)
@@ -532,10 +546,14 @@ async def create_transaction(
     category_name = category.strip() if category else None
     category_pk = None
 
-    if category_id is not None:
+    if category_id is not None and category_id != "__new__":
+        try:
+            category_pk_int = int(category_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Categoria inválida")
         category_result = await db.execute(
             select(Category).where(
-                Category.id == category_id,
+                Category.id == category_pk_int,
                 Category.user_id == user.id,
             )
         )
@@ -556,9 +574,15 @@ async def create_transaction(
         category_pk = new_cat.id
         category_name = new_cat.name
     elif category_name:
-        logger.warning(
-            "Transaction created with legacy category string for user %s", user.id
+        # create category on the fly to keep analytics consistent
+        new_cat = Category(
+            user_id=user.id,
+            name=category_name,
+            type=tx_type,
         )
+        db.add(new_cat)
+        await db.flush()
+        category_pk = new_cat.id
 
     tx_type = transaction_type.strip().lower()
     if tx_type not in ("income", "expense"):
