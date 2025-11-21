@@ -45,15 +45,15 @@ async def _validate_turnstile(token: str | None, client_host: str) -> None:
         security_logger.error("Turnstile secret missing while hardening is enabled")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Login temporarily unavailable. Please try again later.",
+            detail="Login indisponível no momento. Tente novamente em instantes.",
         )
 
-        if not token:
-            security_logger.warning("Missing Turnstile token for login [client=%s]", client_host)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Validação do captcha falhou. Atualize a página e tente novamente.",
-            )
+    if not token:
+        security_logger.warning("Missing Turnstile token for login [client=%s]", client_host)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Validação do captcha falhou. Atualize a página e tente novamente.",
+        )
 
     try:
         async with httpx.AsyncClient(timeout=5) as client:
