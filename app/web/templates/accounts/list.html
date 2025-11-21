@@ -38,18 +38,19 @@
         <div class="form-group grid-3" data-credit-only hidden>
             <div>
                 <label for="credit_limit">{{ _('Limite (opcional)') }}</label>
-                <input type="number" id="credit_limit" name="credit_limit" step="0.01" class="form-control" aria-describedby="limit-help">
+                <input type="text" id="credit_limit" name="credit_limit" inputmode="decimal" class="form-control" aria-describedby="limit-help" placeholder="R$ 0,00">
             </div>
             <div>
                 <label for="statement_day">{{ _('Dia de fechamento') }}</label>
-                <input type="number" id="statement_day" name="statement_day" min="1" max="28" class="form-control">
+                <input type="date" id="statement_day" name="statement_day" class="form-control" aria-describedby="close-help">
             </div>
             <div>
                 <label for="due_day">{{ _('Dia de vencimento') }}</label>
-                <input type="number" id="due_day" name="due_day" min="1" max="28" class="form-control">
+                <input type="date" id="due_day" name="due_day" class="form-control" aria-describedby="close-help">
             </div>
         </div>
         <span class="form-hint" data-credit-only hidden id="limit-help">{{ _('Configure fechamento e vencimento para que as faturas funcionem corretamente. Limite é opcional, mas recomendável.') }}</span>
+        <span class="form-hint" data-credit-only hidden id="close-help">{{ _('Use uma data para capturar o dia (apenas o dia será salvo).') }}</span>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{{ _('Criar conta') }}</button>
@@ -80,7 +81,7 @@
                         <label for="account-name-{{ account.id }}">{{ _('Nome') }}</label>
                         <input id="account-name-{{ account.id }}" name="name" class="form-control" required value="{{ account.name }}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" data-non-credit>
                         <label for="account-balance-{{ account.id }}">{{ _('Saldo') }}</label>
                         <input id="account-balance-{{ account.id }}" name="balance" class="form-control" required value="{{ '%.2f'|format(account.balance) }}" data-non-credit>
                     </div>
@@ -88,15 +89,15 @@
                     <div class="form-group grid-3">
                         <div>
                             <label for="credit-limit-{{ account.id }}">{{ _('Limite') }}</label>
-                            <input id="credit-limit-{{ account.id }}" name="credit_limit" step="0.01" class="form-control" value="{{ account.credit_limit if account.credit_limit is not none else '' }}">
+                            <input id="credit-limit-{{ account.id }}" name="credit_limit" class="form-control" inputmode="decimal" value="{{ account.credit_limit if account.credit_limit is not none else '' }}" placeholder="R$ 0,00">
                         </div>
                         <div>
                             <label for="statement-day-{{ account.id }}">{{ _('Fechamento') }}</label>
-                            <input id="statement-day-{{ account.id }}" name="statement_day" min="1" max="28" class="form-control" value="{{ account.statement_day or '' }}">
+                            <input id="statement-day-{{ account.id }}" name="statement_day" type="date" class="form-control" value="" data-day="{{ account.statement_day or '' }}">
                         </div>
                         <div>
                             <label for="due-day-{{ account.id }}">{{ _('Vencimento') }}</label>
-                            <input id="due-day-{{ account.id }}" name="due_day" min="1" max="28" class="form-control" value="{{ account.due_day or '' }}">
+                            <input id="due-day-{{ account.id }}" name="due_day" type="date" class="form-control" value="" data-day="{{ account.due_day or '' }}">
                         </div>
                     </div>
                     {% endif %}

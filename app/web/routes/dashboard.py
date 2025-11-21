@@ -344,16 +344,26 @@ async def create_account(
     credit_limit_val = None
     if credit_limit not in (None, ""):
         try:
-            credit_limit_val = float(credit_limit)
-        except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="Invalid credit limit")
+            credit_limit_val, _ = parse_money(credit_limit)
+        except HTTPException as exc:
+            raise HTTPException(status_code=400, detail=str(exc.detail))
 
-    statement_day_val = None
-    due_day_val = None
-    if statement_day not in (None, ""):
-        statement_day_val = int(statement_day)
-    if due_day not in (None, ""):
-        due_day_val = int(due_day)
+    def _parse_day(val):
+        if val in (None, ""):
+            return None
+        s = str(val)
+        if "-" in s:
+            try:
+                return datetime.fromisoformat(s).day
+            except ValueError:
+                pass
+        try:
+            return int(s)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid day value")
+
+    statement_day_val = _parse_day(statement_day)
+    due_day_val = _parse_day(due_day)
 
     account = Account(
         user_id=user.id,
@@ -752,16 +762,26 @@ async def edit_account(
     credit_limit_val = None
     if credit_limit not in (None, ""):
         try:
-            credit_limit_val = float(credit_limit)
-        except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="Invalid credit limit")
+            credit_limit_val, _ = parse_money(credit_limit)
+        except HTTPException as exc:
+            raise HTTPException(status_code=400, detail=str(exc.detail))
 
-    statement_day_val = None
-    due_day_val = None
-    if statement_day not in (None, ""):
-        statement_day_val = int(statement_day)
-    if due_day not in (None, ""):
-        due_day_val = int(due_day)
+    def _parse_day(val):
+        if val in (None, ""):
+            return None
+        s = str(val)
+        if "-" in s:
+            try:
+                return datetime.fromisoformat(s).day
+            except ValueError:
+                pass
+        try:
+            return int(s)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid day value")
+
+    statement_day_val = _parse_day(statement_day)
+    due_day_val = _parse_day(due_day)
 
     account.name = name.strip()
     account.balance = bal_val

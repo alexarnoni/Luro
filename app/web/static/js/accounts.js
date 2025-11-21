@@ -41,6 +41,25 @@
         // replace the form value with normalized number
         balanceInput.value = String(parsed.toFixed(2));
       }
+      // normalize credit limit if present
+      const limitInput = form.querySelector('input[name="credit_limit"]');
+      if (limitInput && limitInput.value !== '') {
+        const parsedLimit = parseMoney(limitInput.value);
+        if (parsedLimit === null) {
+          const msg = (window.LURO_I18N && window.LURO_I18N.invalid_balance) || 'Invalid amount format';
+          window.luroToast.show(msg, 'error');
+          if (submit) submit.disabled = false;
+          return;
+        }
+        limitInput.value = parsedLimit.toFixed(2);
+      }
+      // normalize date inputs to keep only day-of-month (backend accepts date strings too)
+      ['statement_day', 'due_day'].forEach((name) => {
+        const input = form.querySelector(`input[name="${name}"]`);
+        if (input && input.type === 'date' && input.value) {
+          // leave as date string; backend extracts the day
+        }
+      });
 
       const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
       if (!res.ok) {
@@ -111,6 +130,16 @@
         sync();
       }
       f.dataset.toggleBound = '1';
+      // populate date inputs with current month using stored day value (data-day)
+      ['statement_day', 'due_day'].forEach((name) => {
+        const input = f.querySelector(`input[name="${name}"]`);
+        if (input && input.type === 'date' && !input.value && input.dataset.day) {
+          const day = String(input.dataset.day).padStart(2, '0');
+          const now = new Date();
+          const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${day}`;
+          input.value = iso;
+        }
+      });
     });
     // bind delete buttons
     document.querySelectorAll('button[data-delete-account]').forEach((btn) => {
