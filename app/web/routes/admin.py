@@ -179,4 +179,5 @@ async def admin_ai_test(
     """Run a lightweight connectivity test to the configured LLM provider."""
     result = await test_llm_connectivity()
     context = await _build_admin_context(request, user, db, ai_test_result=result)
-    return templates.TemplateResponse("admin/index.html", context)
+    # Preserve HTTP status 200 even on failure to keep the page rendering
+    return templates.TemplateResponse("admin/index.html", context, status_code=200)
