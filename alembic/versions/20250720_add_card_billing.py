@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=20), nullable=False, server_default="open"),
         sa.Column("amount_due", sa.Float(), nullable=False, server_default="0"),
         sa.Column("amount_paid", sa.Float(), nullable=False, server_default="0"),
-        sa.Column("carry_applied", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("carry_applied", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("created_at", sa.DateTime(), nullable=True),
         sa.Column("updated_at", sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(["account_id"], ["accounts.id"], ),
