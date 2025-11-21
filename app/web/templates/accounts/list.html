@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Contas - Luro') }}{% endblock %}
+{% block title %}{{ _('Contas/Cartões - Luro') }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>{{ _('Contas') }}</h1>
+    <h1>{{ _('Contas/Cartões') }}</h1>
     <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">
-    + {{ _('Adicionar conta') }}
+    + {{ _('Adicionar conta/cartão') }}
     </button>
 </div>
 
 <section id="account-form" class="form-card" hidden aria-hidden="true">
-    <h2>{{ _('Adicionar nova conta') }}</h2>
+    <h2>{{ _('Adicionar nova conta/cartão') }}</h2>
     <form method="post" action="/accounts">
         <div class="form-group">
             <label for="name">{{ _('Nome da conta') }}</label>
@@ -53,7 +53,7 @@
         <span class="form-hint" data-credit-only hidden id="close-help">{{ _('Use uma data para capturar o dia (apenas o dia será salvo).') }}</span>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">{{ _('Criar conta') }}</button>
+            <button type="submit" class="btn btn-primary">{{ _('Criar conta/cartão') }}</button>
             <button type="button" class="btn btn-secondary" data-close-target="#account-form">{{ _('Cancelar') }}</button>
         </div>
     </form>
@@ -117,7 +117,7 @@
             <h2 class="empty-state__title">{{ _('Registre sua primeira conta') }}</h2>
             <p class="empty-state__description">{{ _('Organize seus saldos conectando contas bancárias ou carteiras que você acompanha manualmente.') }}</p>
             <div class="empty-state__actions">
-                <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">{{ _('Criar conta') }}</button>
+                <button type="button" class="btn btn-primary" data-toggle-target="#account-form" data-toggle-focus="#name" aria-controls="account-form" aria-expanded="false">{{ _('Criar conta/cartão') }}</button>
                 <a class="btn btn-ghost" href="/transactions" aria-label="{{ _('Ir para importar') }}">{{ _('Importar CSV/OFX') }}</a>
             </div>
         </div>
