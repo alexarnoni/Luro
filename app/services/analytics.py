@@ -98,6 +98,7 @@ async def build_month_summary(
     category_stmt = (
         select(
             Transaction.category_id,
+            Transaction.category.label("fallback_category"),
             func.coalesce(func.sum(Transaction.amount), 0).label("total"),
             Category.name,
             Category.color,
@@ -108,7 +109,7 @@ async def build_month_summary(
         .where(Transaction.transaction_type == "expense")
         .where(Transaction.transaction_date >= month_range.first_day_dt)
         .where(Transaction.transaction_date < month_range.next_month_dt)
-        .group_by(Transaction.category_id, Category.name, Category.color)
+        .group_by(Transaction.category_id, Transaction.category, Category.name, Category.color)
     )
 
     category_rows = await db.execute(category_stmt)
@@ -118,8 +119,8 @@ async def build_month_summary(
         if total_value <= 0:
             continue
         category_id = row.category_id
-        name = row.name or ("Sem categoria" if category_id is None else "Categoria")
-        if category_id is None:
+        name = row.name or row.fallback_category or ("Sem categoria" if category_id is None else "Categoria")
+        if category_id is None and not row.fallback_category:
             name = "Sem categoria"
         color = row.color or DEFAULT_CATEGORY_COLOR
         category_details.append(
