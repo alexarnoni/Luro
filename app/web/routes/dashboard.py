@@ -496,38 +496,7 @@ async def create_transaction(
         if account.statement_day is None or account.due_day is None:
             raise HTTPException(status_code=400, detail="Configure fechamento e vencimento do cartão antes de lançar compras")
 
-        category_pk = None
-        if category_id is not None and category_id != "__new__":
-            try:
-                category_pk_int = int(category_id)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Categoria inválida")
-            result = await db.execute(
-                select(Category).where(Category.id == category_pk_int, Category.user_id == user.id)
-            )
-            category_obj = result.scalar_one_or_none()
-            if not category_obj:
-                raise HTTPException(status_code=404, detail="Category not found")
-            category_pk = category_obj.id
-        elif new_category:
-            new_cat = Category(
-                user_id=user.id,
-                name=new_category.strip(),
-                type=tx_type,
-            )
-            db.add(new_cat)
-            await db.flush()
-            category_pk = new_cat.id
-        elif category:
-            # fallback: text-only category
-            new_cat = Category(
-                user_id=user.id,
-                name=category.strip(),
-                type=tx_type,
-            )
-            db.add(new_cat)
-            await db.flush()
-            category_pk = new_cat.id
+        category_pk, _cat_name = await _resolve_category_id(new_category or category, category_id)
 
         await create_card_purchase(
             db=db,
@@ -547,50 +516,11 @@ async def create_transaction(
     if account.account_type == "credit":
         raise HTTPException(status_code=400, detail="Use o modo cartão para lançar compras de crédito")
 
-    category_name = category.strip() if category else None
-    category_pk = None
-
-    if category_id is not None and category_id != "__new__":
-        try:
-            category_pk_int = int(category_id)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Categoria inválida")
-        category_result = await db.execute(
-            select(Category).where(
-                Category.id == category_pk_int,
-                Category.user_id == user.id,
-            )
-        )
-        category_obj = category_result.scalar_one_or_none()
-        if not category_obj:
-            raise HTTPException(status_code=404, detail="Category not found")
-        category_pk = category_obj.id
-        if not category_name:
-            category_name = category_obj.name
-    elif new_category:
-        new_cat = Category(
-            user_id=user.id,
-            name=new_category.strip(),
-            type=tx_type,
-        )
-        db.add(new_cat)
-        await db.flush()
-        category_pk = new_cat.id
-        category_name = new_cat.name
-    elif category_name:
-        # create category on the fly to keep analytics consistent
-        new_cat = Category(
-            user_id=user.id,
-            name=category_name,
-            type=tx_type,
-        )
-        db.add(new_cat)
-        await db.flush()
-        category_pk = new_cat.id
+    category_pk, category_name = await _resolve_category_id(new_category or category, category_id)
 
     # Create transaction and update balance atomically
     transaction = Transaction(
-        account_id=account_id,
+        account_id=account_id_int,
         amount=abs(amt),
         transaction_type=tx_type,
         category=category_name,
@@ -1138,3 +1068,53 @@ async def contribute_to_goal(
             raise HTTPException(status_code=400, detail="Selecione uma conta válida")
 
     account_id_int = _parse_account_id(account_id)
+
+    async def _resolve_category_id(name_val: str | None, cat_id_val: str | None) -> tuple[int | None, str | None]:
+        """Return (category_id, category_name) handling existing IDs and quick creation.
+
+        - If a valid category_id is provided, fetch and return it (with name).
+        - If new_category/name text is provided, reuse existing category (case-insensitive) or create a new one.
+        """
+        if cat_id_val is not None:
+            s = str(cat_id_val).strip()
+            if s == "" or s.lower() == "null":
+                cat_id_val = None
+            elif s == "__new__":
+                cat_id_val = None
+            else:
+                try:
+                    cat_pk_int = int(s)
+                except (TypeError, ValueError):
+                    raise HTTPException(status_code=400, detail="Categoria inválida")
+                result = await db.execute(
+                    select(Category).where(Category.id == cat_pk_int, Category.user_id == user.id)
+                )
+                cat_obj = result.scalar_one_or_none()
+                if not cat_obj:
+                    raise HTTPException(status_code=404, detail="Category not found")
+                return cat_obj.id, cat_obj.name
+
+        name_clean = (name_val or "").strip()
+        if not name_clean:
+            return None, None
+
+        # try reuse by case-insensitive name
+        existing = await db.execute(
+            select(Category).where(
+                Category.user_id == user.id,
+                func.lower(Category.name) == func.lower(name_clean),
+            )
+        )
+        cat_obj = existing.scalar_one_or_none()
+        if cat_obj:
+            return cat_obj.id, cat_obj.name
+
+        # create new
+        new_cat = Category(
+            user_id=user.id,
+            name=name_clean,
+            type=tx_type,
+        )
+        db.add(new_cat)
+        await db.flush()
+        return new_cat.id, new_cat.name
