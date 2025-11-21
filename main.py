@@ -76,20 +76,23 @@ async def http_error_handler(request: Request, exc: Exception):
     if not isinstance(exc, HTTPException):
         raise exc
 
-    accepts_html = "text/html" in (request.headers.get("accept") or "")
-    wants_web = accepts_html and not request.url.path.startswith("/api")
+    path = request.url.path
+    is_api = path.startswith("/api")
 
-    if exc.status_code == status.HTTP_401_UNAUTHORIZED and wants_web:
-        next_url = request.url.path
+    # Para rotas web, sempre redirecionar 401 para login
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED and not is_api:
+        next_url = path
         return RedirectResponse(url=f"/login?next={next_url}", status_code=status.HTTP_302_FOUND)
 
-    if exc.status_code == status.HTTP_403_FORBIDDEN and wants_web:
+    # Para rotas web, exibir página amigável em 403
+    if exc.status_code == status.HTTP_403_FORBIDDEN and not is_api:
         return templates.TemplateResponse(
             "errors/403.html",
             {"request": request, "detail": exc.detail},
             status_code=status.HTTP_403_FORBIDDEN,
         )
 
+    # APIs (ou demais erros) respondem JSON consistente
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
