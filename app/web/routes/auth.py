@@ -48,12 +48,12 @@ async def _validate_turnstile(token: str | None, client_host: str) -> None:
             detail="Login temporarily unavailable. Please try again later.",
         )
 
-    if not token:
-        security_logger.warning("Missing Turnstile token for login [client=%s]", client_host)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Captcha validation failed. Please refresh and try again.",
-        )
+        if not token:
+            security_logger.warning("Missing Turnstile token for login [client=%s]", client_host)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Validação do captcha falhou. Atualize a página e tente novamente.",
+            )
 
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -70,7 +70,7 @@ async def _validate_turnstile(token: str | None, client_host: str) -> None:
             security_logger.warning("Turnstile validation failed [client=%s]", client_host)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Captcha validation failed. Please try again.",
+                detail="Validação do captcha falhou. Tente novamente.",
             )
     except HTTPException:
         raise
@@ -78,7 +78,7 @@ async def _validate_turnstile(token: str | None, client_host: str) -> None:
         security_logger.error("Turnstile validation error [client=%s]", client_host, exc_info=exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Captcha service unavailable. Try again in a moment.",
+            detail="Serviço de captcha indisponível. Tente novamente em instantes.",
         )
 
 
@@ -103,7 +103,7 @@ async def _enforce_login_rate_limits(
         security_logger.warning("Login rate limit exceeded for IP [%s]", hashed_ip)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again later.",
+            detail="Muitas tentativas de login. Tente novamente mais tarde.",
         )
 
     email_count = await db.scalar(
@@ -117,7 +117,7 @@ async def _enforce_login_rate_limits(
         security_logger.warning("Login rate limit exceeded for email [%s]", hashed_email)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts for this email. Please try again later.",
+            detail="Muitas tentativas de login para este e-mail. Tente novamente mais tarde.",
         )
 
     db.add(
@@ -162,7 +162,7 @@ async def login(
             logger.warning("Login rate limit exceeded for identifier %s", anonymised_key)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many login attempts. Please try again later.",
+                detail="Muitas tentativas de login. Tente novamente mais tarde.",
             )
 
     # Generate magic link token
@@ -233,7 +233,7 @@ async def login(
                 )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Login is temporarily unavailable. Please try again later.",
+                detail="Login indisponível no momento. Tente novamente em instantes.",
             )
 
     return templates.TemplateResponse(
