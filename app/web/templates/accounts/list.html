@@ -127,5 +127,21 @@
 <script src="/static/js/ui.js?v={{ ASSETS_VERSION }}" defer></script>
 <script src="/static/js/toast.js?v={{ ASSETS_VERSION }}" defer></script>
 <script src="/static/js/accounts.js?v={{ ASSETS_VERSION }}" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const typeSelect = document.getElementById('account_type');
+    const creditBlocks = document.querySelectorAll('[data-credit-only]');
+    const nonCreditBlocks = document.querySelectorAll('[data-non-credit]');
+    function sync() {
+      const isCredit = typeSelect && typeSelect.value === 'credit';
+      creditBlocks.forEach((el) => { el.hidden = !isCredit; });
+      nonCreditBlocks.forEach((el) => { el.hidden = isCredit; });
+    }
+    if (typeSelect) {
+      typeSelect.addEventListener('change', sync);
+      sync();
+    }
+  });
+</script>
 {% endblock %}
 {% endblock %}
