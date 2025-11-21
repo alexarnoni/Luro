@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import asyncio
 import os
-from sqlalchemy import update, select
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from app.domain.categories.models import Category
 from app.core.config import settings
+from app.domain.users.models import User  # noqa: F401
+from app.domain.transactions.models import Transaction  # noqa: F401
+from app.domain.rules.models import Rule  # noqa: F401
+from app.domain.categories.models import Category
 
 PALETTE = [
     "#60a5fa", "#f472b6", "#22c55e", "#f59e0b", "#a78bfa",
