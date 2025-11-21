@@ -485,6 +485,10 @@ async def create_transaction(
     if amt == 0:
         raise HTTPException(status_code=400, detail="Amount must be non-zero")
 
+    tx_type = transaction_type.strip().lower()
+    if tx_type not in ("income", "expense"):
+        raise HTTPException(status_code=400, detail="Invalid transaction type")
+
     if payment_mode == "card":
         account = await get_user_account(db, user.id, account_id_int)
         if account.account_type != "credit":
@@ -583,10 +587,6 @@ async def create_transaction(
         db.add(new_cat)
         await db.flush()
         category_pk = new_cat.id
-
-    tx_type = transaction_type.strip().lower()
-    if tx_type not in ("income", "expense"):
-        raise HTTPException(status_code=400, detail="Invalid transaction type")
 
     # Create transaction and update balance atomically
     transaction = Transaction(
