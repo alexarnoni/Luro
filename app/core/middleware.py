@@ -59,6 +59,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                 request_id,
             )
 
+        # If any handler returned 401 on web routes, turn into redirect to login
+        if not path.startswith("/api") and getattr(response, "status_code", None) == 401:
+            from fastapi.responses import RedirectResponse
+            login_url = f"/login?next={path}"
+            response = RedirectResponse(url=login_url, status_code=303)
+
         return response
 
 
