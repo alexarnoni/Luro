@@ -323,8 +323,8 @@ async def create_account(
     account_type: str = Form(...),
     balance: str | float = Form(0.0),
     credit_limit: str | float | None = Form(None),
-    statement_day: int | None = Form(None),
-    due_day: int | None = Form(None),
+    statement_day: str | None = Form(None),
+    due_day: str | None = Form(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -349,9 +349,13 @@ async def create_account(
             raise HTTPException(status_code=400, detail=str(exc.detail))
 
     def _parse_day(val):
-        if val in (None, ""):
+        if val in (None, "", "null"):
             return None
-        s = str(val)
+        if isinstance(val, (int, float)):
+            return int(val)
+        s = str(val).strip()
+        if s == "":
+            return None
         if "-" in s:
             try:
                 return datetime.fromisoformat(s).day
@@ -370,9 +374,9 @@ async def create_account(
         name=name.strip(),
         account_type=account_type.strip(),
         balance=bal_val,
-        credit_limit=credit_limit_val,
-        statement_day=statement_day_val,
-        due_day=due_day_val,
+        credit_limit=credit_limit_val if account_type.strip() == "credit" else None,
+        statement_day=statement_day_val if account_type.strip() == "credit" else None,
+        due_day=due_day_val if account_type.strip() == "credit" else None,
     )
     db.add(account)
     try:
@@ -736,8 +740,8 @@ async def edit_account(
     name: str = Form(...),
     balance: str | float = Form(...),
     credit_limit: str | float | None = Form(None),
-    statement_day: int | None = Form(None),
-    due_day: int | None = Form(None),
+    statement_day: str | None = Form(None),
+    due_day: str | None = Form(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -767,9 +771,13 @@ async def edit_account(
             raise HTTPException(status_code=400, detail=str(exc.detail))
 
     def _parse_day(val):
-        if val in (None, ""):
+        if val in (None, "", "null"):
             return None
-        s = str(val)
+        if isinstance(val, (int, float)):
+            return int(val)
+        s = str(val).strip()
+        if s == "":
+            return None
         if "-" in s:
             try:
                 return datetime.fromisoformat(s).day
@@ -789,6 +797,10 @@ async def edit_account(
         account.credit_limit = credit_limit_val
         account.statement_day = statement_day_val
         account.due_day = due_day_val
+    else:
+        account.credit_limit = None
+        account.statement_day = None
+        account.due_day = None
     db.add(account)
     try:
         await db.commit()
