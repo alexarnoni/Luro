@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback{% endblock %}
+
+{% block content %}
+<section class="card">
+    <header class="card__header">
+        <h1>Feedback</h1>
+        <p class="text-muted">Conte o que achou do Luro. Seu retorno chega direto para nós.</p>
+    </header>
+
+    {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    {% if errors and errors|length %}
+        <div class="alert alert-danger">
+            <ul>
+                {% for err in errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" class="form-grid">
+        <div class="form-group">
+            <label for="kind">Tipo</label>
+            <select name="kind" id="kind">
+                {% for code, label in feedback_types.items() %}
+                    <option value="{{ code }}" {% if form.kind == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Seu e-mail (opcional)</label>
+            <input type="email" id="email" name="email" placeholder="voce@email.com" value="{{ form.email or '' }}">
+            <small class="text-muted">Usaremos para responder, se necessário.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="subject">Assunto (opcional)</label>
+            <input type="text" id="subject" name="subject" placeholder="Ex.: Ideia para o app" value="{{ form.subject or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="message">Mensagem</label>
+            <textarea id="message" name="message" rows="6" required placeholder="Escreva sua sugestão, elogio ou problema">{{ form.message or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Enviar feedback</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Resend API
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "noreply@example.com"
+    FEEDBACK_TO_EMAIL: str = "alexandre.anf@gmail.com"
 
     # Captcha
     TURNSTILE_SITE_KEY: str = ""

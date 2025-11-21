@@ -25,6 +25,7 @@
                         <li><a href="/accounts">{{ _('Contas/Cartões') }}</a></li>
                         <li><a href="/transactions">{{ _('Transações') }}</a></li>
                         <li><a href="/goals">{{ _('Metas') }}</a></li>
+                        <li><a href="/feedback">{{ _('Feedback') }}</a></li>
                         {% if is_admin(user) %}
                         <li><a href="/admin">{{ _('Admin') }}</a></li>
                         {% endif %}
@@ -32,6 +33,7 @@
                     </ul>
                 {% else %}
                     <ul class="nav-links">
+                        <li><a href="/feedback">{{ _('Feedback') }}</a></li>
                         <li><a href="/login">{{ _('Entrar') }}</a></li>
                     </ul>
                 {% endif %}
@@ -63,7 +65,7 @@
             <p>&copy; 2024 Luro. {{ _('Gerenciamento Financeiro Pessoal') }}.</p>
             <p class="beta-badge">{{ _('Beta público: o Luro está em fase de testes. Feedbacks são bem-vindos!') }}</p>
             <div class="footer-links">
-                <a href="mailto:alexandre@alexarnoni.com">{{ _('Enviar feedback') }}</a>
+                <a href="/feedback">{{ _('Enviar feedback') }}</a>
                 <span aria-hidden="true">•</span>
                 <a href="https://www.instagram.com/luro.app/" rel="noopener" target="_blank">Instagram</a>
                 <span aria-hidden="true">•</span>
