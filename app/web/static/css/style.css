@@ -229,9 +229,14 @@ body[data-nav-open="true"] {
 }
 
 @media (max-width: 900px) {
+    .navbar {
+        position: static; /* don't follow scroll on mobile */
+    }
+
     .nav-actions {
         gap: 0.75rem;
         width: 100%;
+        justify-content: space-between;
     }
 
     .logo {
@@ -264,6 +269,7 @@ body[data-nav-open="true"] {
         visibility: hidden;
         pointer-events: none;
         overflow-y: auto;
+        border-left: 1px solid var(--color-border);
     }
 
     body[data-nav-open] .nav-links {
@@ -282,10 +288,18 @@ body[data-nav-open="true"] {
     .nav-links a {
         font-size: 1rem;
         width: 100%;
+        padding: 0.4rem 0;
     }
 
     .theme-toggle {
         margin-left: auto;
+        padding: 0.6rem;
+        min-width: 44px;
+        justify-content: center;
+    }
+
+    .theme-toggle__label {
+        display: none;
     }
 }
 
