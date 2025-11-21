@@ -1147,3 +1147,11 @@ async def contribute_to_goal(
         if card_account_id not in (None, "", "null"):
             return _parse_account_id(card_account_id)
         return _parse_account_id(account_id)
+
+    def _select_account_id() -> int:
+        # prefer explicit bank/card selects if provided, else fallback to hidden account_id
+        if bank_account_id not in (None, "", "null"):
+            return _parse_account_id(bank_account_id)
+        if card_account_id not in (None, "", "null"):
+            return _parse_account_id(card_account_id)
+        return _parse_account_id(account_id)
