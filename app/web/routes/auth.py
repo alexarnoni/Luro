@@ -201,14 +201,14 @@ async def login(
             resend.Emails.send({
                 "from": from_field,
                 "to": email,
-                "subject": f"Login to {settings.APP_NAME}",
+                "subject": f"Seu acesso ao {settings.APP_NAME}",
                 "html": f"""
                 <html>
                     <body>
-                        <h1>Login to {settings.APP_NAME}</h1>
-                        <p>Click the link below to login:</p>
-                        <a href="{magic_link}">Login to {settings.APP_NAME}</a>
-                        <p>This link will expire in {settings.MAGIC_LINK_EXPIRY_MINUTES} minutes.</p>
+                        <h1>Acesse o {settings.APP_NAME}</h1>
+                        <p>Clique no link abaixo para entrar:</p>
+                        <a href="{magic_link}">Entrar no {settings.APP_NAME}</a>
+                        <p>Este link expira em {settings.MAGIC_LINK_EXPIRY_MINUTES} minutos.</p>
                     </body>
                 </html>
                 """
