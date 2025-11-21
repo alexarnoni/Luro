@@ -12,7 +12,7 @@ from starlette.types import ASGIApp
 from starlette.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.cookies import SESSION_COOKIE_NAME
+from app.core.cookies import SESSION_COOKIE_NAME, parse_session_cookie
 from app.core.csrf import SAFE_METHODS, csrf_manager
 
 logger = logging.getLogger(__name__)
@@ -128,17 +128,29 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if method in SAFE_METHODS:
             return await call_next(request)
 
-        content_type = request.headers.get("content-type", "").lower()
-        if "application/json" not in content_type:
+        raw_session = request.cookies.get(SESSION_COOKIE_NAME)
+        if not raw_session:
             return await call_next(request)
+        try:
+            session_identifier = parse_session_cookie(raw_session)
+        except Exception:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid session"},
+            )
 
-        session_identifier = request.cookies.get(SESSION_COOKIE_NAME)
-        if not session_identifier:
+        content_type = (request.headers.get("content-type") or "").lower()
+        is_json = "application/json" in content_type
+        is_form = "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type
+        if not (is_json or is_form):
             return await call_next(request)
 
         header_token = request.headers.get("X-CSRF-Token")
-        if not header_token or not csrf_manager.validate(header_token, session_identifier):
-            logger.warning("Rejected JSON request with invalid CSRF token on %s", request.url.path)
+        cookie_token = request.cookies.get("csrf_token")
+        token = header_token or cookie_token
+
+        if not token or not csrf_manager.validate(token, session_identifier):
+            logger.warning("Rejected request with invalid CSRF token on %s", request.url.path)
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Invalid or missing CSRF token."},

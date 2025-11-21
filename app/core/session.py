@@ -9,7 +9,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cookies import SESSION_COOKIE_NAME
+from app.core.cookies import SESSION_COOKIE_NAME, parse_session_cookie
 from app.core.database import get_db
 from app.domain.users.models import User
 
@@ -17,25 +17,26 @@ security_logger = logging.getLogger("app.security")
 
 
 async def get_session_identifier(
-    session_value: Optional[str] = Cookie(None, alias=SESSION_COOKIE_NAME),
+    raw_session: Optional[str] = Cookie(None, alias=SESSION_COOKIE_NAME),
 ) -> str:
-    """Return the session identifier stored in the cookie."""
-    if not session_value:
-        security_logger.warning("Unauthorized access attempt without session cookie")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    return session_value
+    """Return the user email extracted from the signed session cookie."""
+    try:
+        return parse_session_cookie(raw_session)
+    except HTTPException:
+        security_logger.warning("Unauthorized access attempt with invalid/absent session")
+        raise
 
 
 async def get_current_user(
-    session_value: str = Depends(get_session_identifier),
+    session_email: str = Depends(get_session_identifier),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Load the current user from the database using the session value."""
-    result = await db.execute(select(User).where(User.email == session_value))
+    result = await db.execute(select(User).where(User.email == session_email))
     user = result.scalar_one_or_none()
 
     if not user:
-        hashed_email = hashlib.sha256(session_value.encode()).hexdigest()[:12]
+        hashed_email = hashlib.sha256(session_email.encode()).hexdigest()[:12]
         security_logger.warning("Unauthorized access attempt for email hash=%s", hashed_email)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
