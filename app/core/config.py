@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     ADMIN_EMAILS_RAW: str = Field(default="", alias="ADMIN_EMAILS")
 
     # Static assets cache busting
-    ASSETS_VERSION: str = "3"
+    ASSETS_VERSION: str = "4"
 
     # AI Providers
     LLM_PROVIDER: str = "gemini"
