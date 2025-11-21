@@ -114,6 +114,7 @@
       }
       const isNew = categorySelect.value === '__new__' || noExisting;
       newCategoryInput.hidden = !isNew;
+      newCategoryInput.style.display = isNew ? 'block' : 'none';
       if (!isNew) {
         newCategoryInput.value = '';
       } else {

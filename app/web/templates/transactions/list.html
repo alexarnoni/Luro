@@ -78,9 +78,9 @@
                 {% for cat in categories %}
                 <option value="{{ cat.id }}">{{ cat.name }}</option>
                 {% endfor %}
-                <option value="__new__">{{ _('+ Criar nova categoria') }}</option>
+                <option value="__new__" {% if categories|length == 0 %}selected{% endif %}>{{ _('+ Criar nova categoria') }}</option>
             </select>
-            <input type="text" id="new_category" name="new_category" class="form-control" placeholder="{{ _('Nome da nova categoria') }}" aria-describedby="category-help" hidden>
+            <input type="text" id="new_category" name="new_category" class="form-control" placeholder="{{ _('Nome da nova categoria') }}" aria-describedby="category-help" {% if categories|length == 0 %}{% else %}hidden{% endif %}>
             <span class="form-hint" id="category-help">{{ _('Escolha uma categoria existente ou crie uma nova rapidamente.') }}</span>
         </div>
         
