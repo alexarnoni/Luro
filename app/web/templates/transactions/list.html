@@ -78,6 +78,13 @@
                 {% for cat in categories %}
                 <option value="{{ cat.id }}">{{ cat.name }}</option>
                 {% endfor %}
+                {% if text_categories %}
+                <optgroup label="{{ _('Categorias recentes (texto livre)') }}">
+                    {% for name in text_categories %}
+                    <option value="__text__{{ name }}">{{ name }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
                 <option value="__new__" {% if categories|length == 0 %}selected{% endif %}>{{ _('+ Criar nova categoria') }}</option>
             </select>
             <input type="text" id="new_category" name="new_category" class="form-control" placeholder="{{ _('Nome da nova categoria') }}" aria-describedby="category-help">

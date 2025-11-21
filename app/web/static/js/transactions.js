@@ -108,6 +108,12 @@
 
     const syncCategoryInput = () => {
       if (!categorySelect || !newCategoryInput) return;
+      const val = categorySelect.value || '';
+      if (val.startsWith('__text__')) {
+        const name = val.replace('__text__', '');
+        newCategoryInput.value = name;
+        categorySelect.value = '__new__';
+      }
       const isNew = categorySelect.value === '__new__';
       if (isNew) {
         newCategoryInput.focus();
