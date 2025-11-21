@@ -450,7 +450,7 @@ async def transactions_page(
 async def create_transaction(
     request: Request,
     payment_method: str = Form("account"),
-    account_id: int = Form(...),
+    account_id: str | int = Form(...),
     amount: str | float = Form(...),
     installments_total: int = Form(1),
     transaction_type: str = Form(...),
@@ -486,7 +486,7 @@ async def create_transaction(
         raise HTTPException(status_code=400, detail="Amount must be non-zero")
 
     if payment_mode == "card":
-        account = await get_user_account(db, user.id, account_id)
+        account = await get_user_account(db, user.id, account_id_int)
         if account.account_type != "credit":
             raise HTTPException(status_code=400, detail="Selecione um cartão de crédito válido")
         if account.statement_day is None or account.due_day is None:
@@ -539,7 +539,7 @@ async def create_transaction(
         return RedirectResponse(url="/transactions", status_code=303)
 
     # Debit/credit (conta) flow
-    account = await get_user_account(db, user.id, account_id)
+    account = await get_user_account(db, user.id, account_id_int)
     if account.account_type == "credit":
         raise HTTPException(status_code=400, detail="Use o modo cartão para lançar compras de crédito")
 
@@ -1129,3 +1129,12 @@ async def contribute_to_goal(
         return JSONResponse(content=payload)
 
     return RedirectResponse(url="/goals", status_code=303)
+    def _parse_account_id(raw: str | int | None) -> int:
+        if raw in (None, "", "null"):
+            raise HTTPException(status_code=400, detail="Selecione uma conta válida")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Selecione uma conta válida")
+
+    account_id_int = _parse_account_id(account_id)
