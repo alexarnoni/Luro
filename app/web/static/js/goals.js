@@ -128,6 +128,19 @@
   }
 
   function init() {
+    // Toggle add-goal form (uses data attribute instead of inline JS)
+    const toggleBtn = document.querySelector('[data-goal-toggle]');
+    if (toggleBtn && !toggleBtn.dataset.luroBoundToggle) {
+      const form = document.getElementById('goal-form');
+      toggleBtn.addEventListener('click', () => {
+        if (!form) return;
+        const isHidden = form.hasAttribute('hidden');
+        if (isHidden) form.removeAttribute('hidden');
+        else form.setAttribute('hidden', 'true');
+      });
+      toggleBtn.dataset.luroBoundToggle = '1';
+    }
+
     const forms = document.querySelectorAll('form.goal-contribute-form');
     forms.forEach((f) => {
       // guard idempotent registration
