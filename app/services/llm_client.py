@@ -87,10 +87,29 @@ async def _generate_with_openai(summary_json: dict[str, Any]) -> str:
 
 
 async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
+    model = getattr(settings, "OLLAMA_MODEL", "")
+    if not model:
+        raise ValueError("OLLAMA_MODEL não configurado para geração de insights.")
+
     prompt = build_user_prompt(summary_json)
     stub_response = _build_stub_content(summary_json, provider_name="Ollama")
-    combined_prompt = _combine_prompts(PROMPT_SYSTEM, prompt)
-    return await _call_ollama(combined_prompt, stub_response=stub_response)
+
+    if str(model).strip().lower() in {"stub", "debug"}:
+        return stub_response
+
+    payload = {"model": model, "prompt": prompt, "stream": False}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post("http://ollama:11434/api/generate", json=payload)
+        response.raise_for_status()
+    data = response.json()
+
+    try:
+        raw_response = data["response"]
+        if not raw_response:
+            raise KeyError("missing response")
+        return str(raw_response).strip()
+    except Exception as exc:  # pragma: no cover - defensive
+        raise ValueError("Resposta inválida recebida do Ollama.") from exc
 
 
 async def _call_gemini(user_prompt: str, *, system_prompt: str, stub_response: str) -> str:
