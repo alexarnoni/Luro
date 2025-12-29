@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any
@@ -24,6 +25,9 @@ if _should_use_httpx_stub():
     from app.dev import httpx_stub as httpx  # type: ignore  # pragma: no cover
 else:
     import httpx
+
+
+logger = logging.getLogger(__name__)
 
 
 PROMPT_SYSTEM = (
@@ -96,16 +100,21 @@ async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
         raise ValueError("OLLAMA_URL não configurada para geração de insights.")
 
     prompt = build_user_prompt(summary_json)
+    full_prompt = _combine_prompts(PROMPT_SYSTEM, prompt)
     stub_response = _build_stub_content(summary_json, provider_name="Ollama")
 
     if str(model).strip().lower() in {"stub", "debug"} or str(base_url).strip().lower() in {"stub", "debug"}:
         return stub_response
 
-    payload = {"model": model, "prompt": prompt, "stream": False}
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(base_url, json=payload)
-        response.raise_for_status()
-    data = response.json()
+    payload = {"model": settings.OLLAMA_MODEL, "prompt": full_prompt, "stream": False}
+    try:
+        async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
+            response = await client.post(base_url, json=payload)
+            response.raise_for_status()
+        data = response.json()
+    except Exception:  # noqa: BLE001
+        logger.exception("Erro detalhado do Ollama")
+        raise
 
     try:
         raw_response = data.get("response") or data.get("message", {}).get("content")
