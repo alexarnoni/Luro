@@ -1,7 +1,10 @@
 from typing import Any
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+DEFAULT_SECRET_KEY = "change-this-secret-key-in-production"
 
 
 class Settings(BaseSettings):
@@ -9,11 +12,11 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./luro.db"
-    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "testserver"]
+    ALLOWED_HOSTS: list[str] = Field(default_factory=lambda: DEFAULT_ALLOWED_HOSTS.copy())
 
     # Application
     ENV: str = "development"
-    SECRET_KEY: str = "change-this-secret-key-in-production"
+    SECRET_KEY: str = DEFAULT_SECRET_KEY
     APP_NAME: str = "Luro"
     DEBUG: bool = True
     ENABLE_CSRF_JSON: bool = True
@@ -60,6 +63,12 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
+    @field_validator("ALLOWED_HOSTS", mode="before")
+    @classmethod
+    def parse_allowed_hosts(cls, value: Any) -> list[str] | Any:
+        """Support comma-separated ALLOWED_HOSTS from environment."""
+        return _normalize_allowed_hosts(value)
+
     @computed_field
     @property
     def admin_emails(self) -> list[str]:
@@ -68,6 +77,21 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def _normalize_allowed_hosts(value: Any) -> list[str]:
+    """Accept comma-separated string or list-like and normalize hosts."""
+    if value is None or value == "":
+        return []
+
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+    elif isinstance(value, (list, tuple, set)):
+        parts = [str(part).strip() for part in value]
+    else:
+        return []
+
+    return [part for part in parts if part]
 
 
 def _normalize_admin_emails(value: Any) -> list[str]:
@@ -91,8 +115,12 @@ def _validate_security() -> None:
     if env != "production":
         return
 
-    if settings.SECRET_KEY == "change-this-secret-key-in-production":
+    secret = settings.SECRET_KEY
+    if not secret or secret == DEFAULT_SECRET_KEY or len(secret) < 32:
         raise ValueError("SECRET_KEY must be set to a strong value in production.")
+
+    if not settings.ALLOWED_HOSTS or settings.ALLOWED_HOSTS == DEFAULT_ALLOWED_HOSTS:
+        raise ValueError("ALLOWED_HOSTS must be configured explicitly in production.")
 
     if settings.DATABASE_URL.startswith("sqlite"):
         raise ValueError("Use PostgreSQL in production; sqlite is only for local/dev.")

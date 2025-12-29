@@ -4,7 +4,7 @@ from sqlalchemy import (
     Integer,
     String,
     DateTime,
-    Float,
+    Numeric,
     ForeignKey,
     Text,
     Index,
@@ -24,7 +24,7 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
-    amount = Column(Float, nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
     transaction_type = Column(String, nullable=False)  # income, expense
     category = Column(String, nullable=True)
     category_id = Column(

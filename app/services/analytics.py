@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
@@ -91,9 +92,11 @@ async def build_month_summary(
     )
 
     totals_result = await db.execute(totals_stmt)
-    totals_map = {row.transaction_type: float(row.total or 0) for row in totals_result}
-    income_total = totals_map.get("income", 0.0)
-    expense_total = totals_map.get("expense", 0.0)
+    totals_map = {
+        row.transaction_type: Decimal(row.total or 0) for row in totals_result
+    }
+    income_total = totals_map.get("income", Decimal("0"))
+    expense_total = totals_map.get("expense", Decimal("0"))
 
     category_stmt = (
         select(
@@ -115,7 +118,7 @@ async def build_month_summary(
     category_rows = await db.execute(category_stmt)
     category_details = []
     for row in category_rows:
-        total_value = float(row.total or 0)
+        total_value = Decimal(row.total or 0)
         if total_value <= 0:
             continue
         category_id = row.category_id
@@ -133,16 +136,16 @@ async def build_month_summary(
         )
 
     category_details.sort(key=lambda item: item["total"], reverse=True)
-    total_expense_value = sum(item["total"] for item in category_details)
+    total_expense_value = sum((item["total"] for item in category_details), Decimal("0"))
 
     by_category = []
     for item in category_details:
-        percent = (item["total"] / total_expense_value * 100) if total_expense_value else 0.0
+        percent = (item["total"] / total_expense_value * 100) if total_expense_value else Decimal("0")
         by_category.append(
             {
                 "name": item["name"],
                 "total": item["total"],
-                "percent": percent,
+                "percent": float(percent),
             }
         )
 
@@ -154,8 +157,8 @@ async def build_month_summary(
     series_data = {
         key: {
             "month": key,
-            "income": 0.0,
-            "expense": 0.0,
+            "income": Decimal("0"),
+            "expense": Decimal("0"),
         }
         for key in month_keys
     }
@@ -177,7 +180,7 @@ async def build_month_summary(
         key = row.transaction_date.strftime("%Y-%m")
         if key not in series_data:
             continue
-        amount = float(row.amount or 0)
+        amount = Decimal(row.amount or 0)
         if row.transaction_type == "income":
             series_data[key]["income"] += amount
         elif row.transaction_type == "expense":
@@ -196,7 +199,7 @@ async def build_month_summary(
         )
 
     selected_key = month_range.month
-    selected_row = series_data.get(selected_key, {"income": 0.0, "expense": 0.0})
+    selected_row = series_data.get(selected_key, {"income": Decimal("0"), "expense": Decimal("0")})
     selected_income = selected_row["income"]
     selected_expense = selected_row["expense"]
 
@@ -204,27 +207,27 @@ async def build_month_summary(
     previous_keys = month_keys[max(0, selected_index - 3) : selected_index]
 
     if previous_keys:
-        previous_income_total = sum(series_data[key]["income"] for key in previous_keys)
-        previous_expense_total = sum(series_data[key]["expense"] for key in previous_keys)
+        previous_income_total = sum((series_data[key]["income"] for key in previous_keys), Decimal("0"))
+        previous_expense_total = sum((series_data[key]["expense"] for key in previous_keys), Decimal("0"))
         previous_income_avg = previous_income_total / len(previous_keys)
         previous_expense_avg = previous_expense_total / len(previous_keys)
     else:
-        previous_income_avg = 0.0
-        previous_expense_avg = 0.0
+        previous_income_avg = Decimal("0")
+        previous_expense_avg = Decimal("0")
 
-    def _compute_delta(current: float, baseline: float) -> float:
+    def _compute_delta(current: Decimal, baseline: Decimal) -> Decimal:
         if baseline == 0:
-            return 0.0
+            return Decimal("0")
         return (current - baseline) / baseline * 100
 
     delta_vs_3m = {
-        "income_pct": _compute_delta(selected_income, previous_income_avg),
-        "expense_pct": _compute_delta(selected_expense, previous_expense_avg),
+        "income_pct": float(_compute_delta(selected_income, previous_income_avg)),
+        "expense_pct": float(_compute_delta(selected_expense, previous_expense_avg)),
     }
 
     outliers: list[dict[str, Any]] = []
     if category_details:
-        average_expense = total_expense_value / len(category_details) if category_details else 0.0
+        average_expense = total_expense_value / len(category_details) if category_details else Decimal("0")
         if average_expense > 0:
             for item in category_details:
                 deviation = (item["total"] - average_expense) / average_expense * 100
@@ -232,7 +235,7 @@ async def build_month_summary(
                     outliers.append(
                         {
                             "category": item["name"],
-                            "deviation_pct": deviation,
+                            "deviation_pct": float(deviation),
                         }
                     )
             outliers.sort(key=lambda value: value["deviation_pct"], reverse=True)

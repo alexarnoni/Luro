@@ -10,6 +10,7 @@ from app.core.cookies import clear_session_cookie
 from app.core.database import get_db
 from app.core.session import get_current_user
 from app.domain.accounts.models import Account
+from app.domain.cards.models import CardCharge, CardStatement
 from app.domain.categories.models import Category
 from app.domain.goals.models import Goal
 from app.domain.insights.models import Insight
@@ -32,6 +33,8 @@ async def delete_account(
     ).all()
 
     if account_ids:
+        await db.execute(delete(CardCharge).where(CardCharge.account_id.in_(account_ids)))
+        await db.execute(delete(CardStatement).where(CardStatement.account_id.in_(account_ids)))
         await db.execute(delete(Transaction).where(Transaction.account_id.in_(account_ids)))
 
     await db.execute(delete(Goal).where(Goal.user_id == user.id))

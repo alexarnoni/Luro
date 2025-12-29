@@ -5,7 +5,7 @@ from sqlalchemy import (
     String,
     Date,
     DateTime,
-    Float,
+    Numeric,
     ForeignKey,
     Boolean,
     Index,
@@ -35,8 +35,8 @@ class CardStatement(Base):
     close_date = Column(Date, nullable=False)
     due_date = Column(Date, nullable=False)
     status = Column(String(20), default="open", nullable=False)  # open, closed, paid, overdue
-    amount_due = Column(Float, default=0.0, nullable=False)
-    amount_paid = Column(Float, default=0.0, nullable=False)
+    amount_due = Column(Numeric(10, 2), default=0, nullable=False)
+    amount_paid = Column(Numeric(10, 2), default=0, nullable=False)
     carry_applied = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -55,7 +55,7 @@ class CardCharge(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     statement_id = Column(Integer, ForeignKey("card_statements.id"), nullable=True)
     purchase_date = Column(DateTime, default=datetime.utcnow, nullable=False)
-    amount = Column(Float, nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
     description = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     installment_number = Column(Integer, default=1, nullable=False)
@@ -69,4 +69,3 @@ class CardCharge(Base):
     account = relationship("Account", backref="card_charges")
     statement = relationship("CardStatement", back_populates="charges")
     category = relationship("Category", backref="card_charges")
-
