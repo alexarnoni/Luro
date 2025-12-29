@@ -21,6 +21,7 @@ from app.domain.imports.schemas import ImportMode, ImportPreviewItem, ImportPrev
 from app.domain.rules.models import Rule
 from app.domain.transactions.models import Transaction
 from app.domain.users.models import User
+from app.services.llm_client import suggest_category
 
 
 CANONICAL_FIELDS = {"date", "description", "amount", "type", "account", "category"}
@@ -616,6 +617,32 @@ def _finalize_category_selection(rows: List[ParsedTransaction], categories_by_id
             row.applied_category_id = None
 
 
+async def _autofill_categories_with_llm(rows: List[ParsedTransaction], categories_by_id: dict[int, Category]) -> None:
+    if not categories_by_id:
+        return
+
+    all_categories = list(categories_by_id.values())
+    for row in rows:
+        if row.applied_category_id or not row.description or row.duplicate:
+            continue
+
+        candidates = [category for category in all_categories if category.type == row.transaction_type]
+        category_pool = candidates or all_categories
+        category_names = [category.name for category in category_pool]
+
+        try:
+            choice = await suggest_category(row.description, category_names)
+        except Exception:  # noqa: BLE001
+            continue
+
+        matched = next((category for category in category_pool if category.name.lower() == choice.lower()), None)
+        if not matched:
+            matched = next((category for category in all_categories if category.name.lower() == choice.lower()), None)
+        if matched:
+            row.applied_category_id = matched.id
+            row.category_name = matched.name
+
+
 def _build_preview_response(result: ParsedFileResult, rows: List[ParsedTransaction]) -> ImportPreviewResponse:
     preview_items = [
         ImportPreviewItem(
@@ -709,6 +736,8 @@ async def process_import(
 
     if mode == ImportMode.PREVIEW:
         return _build_preview_response(parsed_result, parsed_result.rows)
+
+    await _autofill_categories_with_llm(parsed_result.rows, categories_by_id)
 
     # Apply mode
     inserted = 0
