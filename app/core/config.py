@@ -3,9 +3,6 @@ from typing import Any
 from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
-DEFAULT_SECRET_KEY = "change-this-secret-key-in-production"
-
 
 def _normalize_allowed_hosts(value: Any) -> list[str]:
     """Accept comma-separated string or list-like and normalize hosts."""
@@ -35,6 +32,10 @@ def _normalize_admin_emails(value: Any) -> list[str]:
         return []
 
     return [part.lower() for part in parts if part]
+
+
+DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+DEFAULT_SECRET_KEY = "change-this-secret-key-in-production"
 
 
 class Settings(BaseSettings):
