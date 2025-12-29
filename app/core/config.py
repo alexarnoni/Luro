@@ -7,6 +7,36 @@ DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
 DEFAULT_SECRET_KEY = "change-this-secret-key-in-production"
 
 
+def _normalize_allowed_hosts(value: Any) -> list[str]:
+    """Accept comma-separated string or list-like and normalize hosts."""
+    if value is None or value == "":
+        return []
+
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+    elif isinstance(value, (list, tuple, set)):
+        parts = [str(part).strip() for part in value]
+    else:
+        return []
+
+    return [part for part in parts if part]
+
+
+def _normalize_admin_emails(value: Any) -> list[str]:
+    """Accept comma-separated string or list-like and normalize to lowercase."""
+    if value is None or value == "":
+        return []
+
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+    elif isinstance(value, (list, tuple, set)):
+        parts = [str(part).strip() for part in value]
+    else:
+        return []
+
+    return [part.lower() for part in parts if part]
+
+
 class Settings(BaseSettings):
     """Application settings."""
 
@@ -78,39 +108,6 @@ class Settings(BaseSettings):
         return _normalize_admin_emails(self.ADMIN_EMAILS_RAW)
 
 
-settings = Settings()
-
-
-def _normalize_allowed_hosts(value: Any) -> list[str]:
-    """Accept comma-separated string or list-like and normalize hosts."""
-    if value is None or value == "":
-        return []
-
-    if isinstance(value, str):
-        parts = [part.strip() for part in value.split(",")]
-    elif isinstance(value, (list, tuple, set)):
-        parts = [str(part).strip() for part in value]
-    else:
-        return []
-
-    return [part for part in parts if part]
-
-
-def _normalize_admin_emails(value: Any) -> list[str]:
-    """Accept comma-separated string or list-like and normalize to lowercase."""
-    if value is None or value == "":
-        return []
-
-    if isinstance(value, str):
-        parts = [part.strip() for part in value.split(",")]
-    elif isinstance(value, (list, tuple, set)):
-        parts = [str(part).strip() for part in value]
-    else:
-        return []
-
-    return [part.lower() for part in parts if part]
-
-
 def _validate_security() -> None:
     """Fail fast when running production with insecure defaults."""
     env = settings.ENV.lower()
@@ -126,6 +123,9 @@ def _validate_security() -> None:
 
     if settings.DATABASE_URL.startswith("sqlite"):
         raise ValueError("Use PostgreSQL in production; sqlite is only for local/dev.")
+
+
+settings = Settings()
 
 
 _validate_security()
