@@ -1,6 +1,7 @@
 """Routes for AI-generated financial insights."""
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,6 +15,8 @@ from app.domain.insights.models import Insight
 from app.domain.users.models import User
 from app.services.analytics import build_month_summary
 from app.services.llm_client import generate_insight
+
+logger = logging.getLogger(__name__)
 
 NO_DATA_MESSAGE = (
     "Poucos dados para gerar um insight. Registre suas movimentações e comece pela reserva de emergência."
@@ -93,6 +96,7 @@ async def generate_monthly_insight(
             detail=str(exc),
         ) from exc
     except Exception as exc:  # pragma: no cover - defensive guard
+        logger.error(f"Falha na IA: {str(exc)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Não foi possível gerar um insight no momento.",

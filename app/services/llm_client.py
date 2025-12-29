@@ -108,6 +108,7 @@ async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
 
     payload = {"model": settings.OLLAMA_MODEL, "prompt": full_prompt, "stream": False}
     try:
+        # trust_env=False garante que o client ignore proxies da rede e fale direto com o container da IA.
         async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
             response = await client.post(base_url, json=payload)
             response.raise_for_status()
