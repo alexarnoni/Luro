@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+from decimal import Decimal
 from typing import Any
 
 from app.core.config import settings
@@ -44,6 +45,18 @@ CATEGORY_PROMPT_SYSTEM = (
 def _resolve_provider() -> str:
     provider = (os.getenv("LLM_PROVIDER") or getattr(settings, "LLM_PROVIDER", "")).strip().lower()
     return provider or "gemini"
+
+
+def _coerce_decimal(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        return {key: _coerce_decimal(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_coerce_decimal(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_coerce_decimal(item) for item in value)
+    return value
 
 
 def build_user_prompt(summary_json: dict[str, Any]) -> str:
@@ -99,18 +112,24 @@ async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
     if not base_url:
         raise ValueError("OLLAMA_URL não configurada para geração de insights.")
 
-    prompt = build_user_prompt(summary_json)
+    safe_summary_json = _coerce_decimal(summary_json)
+    prompt = build_user_prompt(safe_summary_json)
     full_prompt = _combine_prompts(PROMPT_SYSTEM, prompt)
-    stub_response = _build_stub_content(summary_json, provider_name="Ollama")
+    stub_response = _build_stub_content(safe_summary_json, provider_name="Ollama")
 
     if str(model).strip().lower() in {"stub", "debug"} or str(base_url).strip().lower() in {"stub", "debug"}:
         return stub_response
 
     payload = {"model": settings.OLLAMA_MODEL, "prompt": full_prompt, "stream": False}
+    serialized_payload = json.dumps(payload, default=_coerce_decimal)
     try:
         # trust_env=False garante que o client ignore proxies da rede e fale direto com o container da IA.
         async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
-            response = await client.post(base_url, json=payload)
+            response = await client.post(
+                base_url,
+                content=serialized_payload,
+                headers={"Content-Type": "application/json"},
+            )
             response.raise_for_status()
         data = response.json()
     except Exception:  # noqa: BLE001
