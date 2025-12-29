@@ -88,23 +88,27 @@ async def _generate_with_openai(summary_json: dict[str, Any]) -> str:
 
 async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
     model = getattr(settings, "OLLAMA_MODEL", "")
+    base_url = getattr(settings, "OLLAMA_URL", "")
+
     if not model:
         raise ValueError("OLLAMA_MODEL não configurado para geração de insights.")
+    if not base_url:
+        raise ValueError("OLLAMA_URL não configurada para geração de insights.")
 
     prompt = build_user_prompt(summary_json)
     stub_response = _build_stub_content(summary_json, provider_name="Ollama")
 
-    if str(model).strip().lower() in {"stub", "debug"}:
+    if str(model).strip().lower() in {"stub", "debug"} or str(base_url).strip().lower() in {"stub", "debug"}:
         return stub_response
 
     payload = {"model": model, "prompt": prompt, "stream": False}
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post("http://ollama:11434/api/generate", json=payload)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(base_url, json=payload)
         response.raise_for_status()
     data = response.json()
 
     try:
-        raw_response = data["response"]
+        raw_response = data.get("response") or data.get("message", {}).get("content")
         if not raw_response:
             raise KeyError("missing response")
         return str(raw_response).strip()
