@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, date
 from calendar import monthrange
+from decimal import Decimal
 
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -607,9 +608,10 @@ async def create_transaction(
     category_pk, category_name = await _resolve_category_id(new_category or category, category_id)
 
     # Create transaction and update balance atomically
+    amount_decimal = Decimal(str(abs(amt)))
     transaction = Transaction(
         account_id=account_id_int,
-        amount=abs(amt),
+        amount=float(amount_decimal),
         transaction_type=tx_type,
         category=category_name,
         category_id=category_pk,
@@ -620,10 +622,11 @@ async def create_transaction(
 
     # Update account balance (allow negative balances for record-keeping)
     try:
+        balance_decimal = Decimal(str(account.balance or 0))
         if tx_type == "income":
-            account.balance = (account.balance or 0.0) + abs(amt)
+            account.balance = float(balance_decimal + amount_decimal)
         else:  # expense
-            account.balance = (account.balance or 0.0) - abs(amt)
+            account.balance = float(balance_decimal - amount_decimal)
         db.add(account)
         await db.commit()
     except HTTPException:
@@ -967,21 +970,25 @@ async def edit_transaction(
 
     # revert old transaction effect
     try:
+        balance_decimal = Decimal(str(account.balance or 0))
+        previous_amount = Decimal(str(transaction.amount or 0))
+        new_amount = Decimal(str(abs(new_amt)))
         if transaction.transaction_type == 'income':
-            account.balance = (account.balance or 0.0) - float(transaction.amount)
+            balance_decimal -= previous_amount
         else:
-            account.balance = (account.balance or 0.0) + float(transaction.amount)
+            balance_decimal += previous_amount
 
         # apply new transaction effect
         if new_type == 'income':
-            account.balance = (account.balance or 0.0) + abs(new_amt)
+            balance_decimal += new_amount
         else:
-            account.balance = (account.balance or 0.0) - abs(new_amt)
+            balance_decimal -= new_amount
 
         # update transaction
         transaction.description = description
-        transaction.amount = abs(new_amt)
+        transaction.amount = float(new_amount)
         transaction.transaction_type = new_type
+        account.balance = float(balance_decimal)
 
         db.add(account)
         db.add(transaction)
@@ -1023,10 +1030,13 @@ async def delete_transaction(
 
     try:
         # revert transaction effect on account balance
+        balance_decimal = Decimal(str(account.balance or 0))
+        amount_decimal = Decimal(str(transaction.amount or 0))
         if transaction.transaction_type == 'income':
-            account.balance = (account.balance or 0.0) - float(transaction.amount)
+            balance_decimal -= amount_decimal
         else:
-            account.balance = (account.balance or 0.0) + float(transaction.amount)
+            balance_decimal += amount_decimal
+        account.balance = float(balance_decimal)
 
         # delete the transaction
         await db.execute(delete(Transaction).where(Transaction.id == txn_id))

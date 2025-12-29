@@ -66,9 +66,9 @@ async def generate_insight(summary_json: dict[str, Any]) -> str:
 
     if provider == "gemini":
         return await _generate_with_gemini(summary_json)
-    if provider == "openai":
+    elif provider == "openai":
         return await _generate_with_openai(summary_json)
-    if provider == "ollama":
+    elif provider == "ollama":
         return await _generate_with_ollama(summary_json)
 
     raise ValueError("LLM_PROVIDER inválido. Use 'gemini', 'openai' ou 'ollama'.")
@@ -88,7 +88,7 @@ async def _generate_with_openai(summary_json: dict[str, Any]) -> str:
 
 async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
     model = getattr(settings, "OLLAMA_MODEL", "")
-    base_url = getattr(settings, "OLLAMA_URL", "")
+    base_url = settings.OLLAMA_URL
 
     if not model:
         raise ValueError("OLLAMA_MODEL não configurado para geração de insights.")
