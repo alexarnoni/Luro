@@ -905,8 +905,10 @@ async def delete_account(
         raise HTTPException(status_code=404, detail="Account not found")
 
     try:
-        # delete transactions belonging to the account
+        # delete related records belonging to the account
         await db.execute(delete(Transaction).where(Transaction.account_id == account_id))
+        await db.execute(delete(CardCharge).where(CardCharge.account_id == account_id))
+        await db.execute(delete(CardStatement).where(CardStatement.account_id == account_id))
         # delete the account
         await db.execute(delete(Account).where(Account.id == account_id))
         await db.commit()
