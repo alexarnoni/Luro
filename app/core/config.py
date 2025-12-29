@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.0-flash"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4.1-mini"
-    OLLAMA_URL: str = "http://ollama:11434/api/generate"
+    OLLAMA_URL: str = Field(default="http://ollama:11434/api/generate")
     OLLAMA_MODEL: str = "phi3"
     INSIGHTS_MAX_PER_MONTH: int = 5
 
