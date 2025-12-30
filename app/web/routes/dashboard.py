@@ -165,7 +165,6 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
             )
             db.add(adj)
             stmt.carry_applied = True
-            stmt.amount_paid = stmt.amount_due  # mark as settled via carry-over
             stmt.status = "paid"
 
         db.add(stmt)

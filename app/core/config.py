@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     ENABLE_CSRF_JSON: bool = True
     ENABLE_SECURITY_HARDENING: bool = False
     LOG_LEVEL: str = "INFO"
+    CSRF_TRUSTED_ORIGINS: list[str] = Field(default_factory=list)
 
     # Resend API
     RESEND_API_KEY: str = ""
@@ -100,6 +101,12 @@ class Settings(BaseSettings):
     @classmethod
     def parse_allowed_hosts(cls, value: Any) -> list[str] | Any:
         """Support comma-separated ALLOWED_HOSTS from environment."""
+        return _normalize_allowed_hosts(value)
+
+    @field_validator("CSRF_TRUSTED_ORIGINS", mode="before")
+    @classmethod
+    def parse_csrf_trusted_origins(cls, value: Any) -> list[str] | Any:
+        """Support comma-separated CSRF_TRUSTED_ORIGINS from environment."""
         return _normalize_allowed_hosts(value)
 
     @computed_field
