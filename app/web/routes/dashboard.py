@@ -113,14 +113,16 @@ async def get_or_create_statement(
     return stmt
 
 
-async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> float:
+async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> Decimal:
     res = await db.execute(
         select(func.coalesce(func.sum(CardCharge.amount), 0)).where(
             CardCharge.statement_id == statement_id
         )
     )
     total = res.scalar()
-    return float(total or 0.0)
+    if total is None:
+        return Decimal("0")
+    return Decimal(total)
 
 
 async def close_card_statements(db: AsyncSession, account: Account, today: date) -> None:
@@ -133,6 +135,8 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
     statements = result.scalars().all()
 
     for stmt in statements:
+        if stmt.carry_applied:
+            continue
         if stmt.status == "paid":
             continue
         if stmt.close_date > today:
@@ -141,8 +145,9 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
         # recompute totals
         stmt.amount_due = await _sum_statement_charges(db, stmt.id)
         # status
-        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
-        if outstanding <= 0:
+        amount_paid = Decimal(stmt.amount_paid or 0)
+        outstanding = stmt.amount_due - amount_paid
+        if outstanding <= Decimal("0"):
             stmt.status = "paid"
         else:
             stmt.status = "overdue" if today > stmt.due_date else "closed"
@@ -186,20 +191,23 @@ async def apply_card_payment(
         .order_by(CardStatement.close_date)
     )
     statements = res.scalars().all()
-    remaining = amount
+    remaining = Decimal(str(amount))
     last_touched = None
     for stmt in statements:
-        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
+        if stmt.carry_applied:
+            continue
+        amount_paid = Decimal(stmt.amount_paid or 0)
+        outstanding = stmt.amount_due - amount_paid
         if outstanding <= 0:
             continue
         applied = min(remaining, outstanding)
-        stmt.amount_paid = (stmt.amount_paid or 0.0) + applied
+        stmt.amount_paid = amount_paid + applied
         remaining -= applied
         last_touched = stmt
 
         # recalc status
         outstanding_after = stmt.amount_due - stmt.amount_paid
-        if outstanding_after <= 0:
+        if outstanding_after <= Decimal("0"):
             stmt.status = "paid"
         else:
             stmt.status = "overdue" if payment_date.date() > stmt.due_date else "closed"
@@ -211,7 +219,7 @@ async def apply_card_payment(
     if remaining > 0 and statements:
         # nothing to pay, allow creating a negative adjustment in current cycle
         current_stmt = statements[-1]
-        current_stmt.amount_paid = (current_stmt.amount_paid or 0.0) + remaining
+        current_stmt.amount_paid = Decimal(current_stmt.amount_paid or 0) + remaining
         current_stmt.status = "paid" if current_stmt.amount_paid >= current_stmt.amount_due else current_stmt.status
         db.add(current_stmt)
         last_touched = current_stmt
