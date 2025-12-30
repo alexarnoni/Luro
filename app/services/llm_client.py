@@ -32,9 +32,8 @@ logger = logging.getLogger(__name__)
 
 
 PROMPT_SYSTEM = (
-    "Você é um analista financeiro didático que gera insights claros, sem jargões, "
-    "baseados apenas em agregados financeiros mensais. NUNCA cite PII/lojas; use "
-    "APENAS agregados."
+    "Você é um consultor de finanças pessoais brasileiro, amigável e direto. Use termos como "
+    "Boletos, Reserva de Emergência e Vilão do Mês. Evite jargões corporativos."
 )
 CATEGORY_PROMPT_SYSTEM = (
     "Você é um assistente financeiro que classifica transações em categorias. "
@@ -124,7 +123,7 @@ async def _generate_with_ollama(summary_json: dict[str, Any]) -> str:
     serialized_payload = json.dumps(payload, default=_coerce_decimal)
     try:
         # trust_env=False garante que o client ignore proxies da rede e fale direto com o container da IA.
-        async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
+        async with httpx.AsyncClient(timeout=600.0, trust_env=False) as client:
             response = await client.post(
                 base_url,
                 content=serialized_payload,
@@ -166,7 +165,7 @@ async def _call_gemini(user_prompt: str, *, system_prompt: str, stub_response: s
         ]
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         response = await client.post(url, params=params, json=payload)
         response.raise_for_status()
     data = response.json()
@@ -200,7 +199,7 @@ async def _call_openai(user_prompt: str, *, system_prompt: str, stub_response: s
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
     data = response.json()
@@ -221,7 +220,7 @@ async def _call_ollama(prompt: str, *, stub_response: str) -> str:
         return stub_response
 
     payload = {"model": model, "prompt": prompt, "stream": False}
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         response = await client.post(base_url, json=payload)
         response.raise_for_status()
     data = response.json()

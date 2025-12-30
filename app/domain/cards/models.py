@@ -11,7 +11,7 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 
 from app.core.database import Base
 
@@ -29,7 +29,7 @@ class CardStatement(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     year = Column(Integer, nullable=False)
     month = Column(Integer, nullable=False)
     close_date = Column(Date, nullable=False)
@@ -41,8 +41,8 @@ class CardStatement(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    account = relationship("Account", backref="card_statements")
-    charges = relationship("CardCharge", back_populates="statement")
+    account = relationship("Account", backref=backref("card_statements", cascade="all, delete-orphan"))
+    charges = relationship("CardCharge", back_populates="statement", cascade="all, delete-orphan")
 
 
 class CardCharge(Base):
@@ -52,8 +52,12 @@ class CardCharge(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
-    statement_id = Column(Integer, ForeignKey("card_statements.id"), nullable=True)
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
+    statement_id = Column(
+        Integer,
+        ForeignKey("card_statements.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     purchase_date = Column(DateTime, default=datetime.utcnow, nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     description = Column(String, nullable=True)
@@ -66,6 +70,6 @@ class CardCharge(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    account = relationship("Account", backref="card_charges")
+    account = relationship("Account", backref=backref("card_charges", cascade="all, delete-orphan"))
     statement = relationship("CardStatement", back_populates="charges")
     category = relationship("Category", backref="card_charges")
