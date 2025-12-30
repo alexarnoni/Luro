@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 PROMPT_SYSTEM = (
-    "Você é um consultor de finanças pessoais brasileiro, amigável e direto. Use termos como "
-    "Boletos, Reserva de Emergência e Vilão do Mês. Evite jargões corporativos."
+    "Você é um consultor de finanças pessoais brasileiro, amigável e direto. "
+    "Use termos como Boletos, Reserva de Emergência e Vilão do Mês. "
+    "Foque em ajudar o usuário com dicas práticas de economia doméstica."
 )
 CATEGORY_PROMPT_SYSTEM = (
     "Você é um assistente financeiro que classifica transações em categorias. "

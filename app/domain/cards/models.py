@@ -11,7 +11,7 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
 )
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
@@ -41,8 +41,16 @@ class CardStatement(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    account = relationship("Account", backref=backref("card_statements", cascade="all, delete-orphan"))
-    charges = relationship("CardCharge", back_populates="statement", cascade="all, delete-orphan")
+    account = relationship(
+        "Account",
+        back_populates="card_statements",
+        cascade="all, delete-orphan",
+    )
+    charges = relationship(
+        "CardCharge",
+        back_populates="statement",
+        cascade="all, delete-orphan",
+    )
 
 
 class CardCharge(Base):
@@ -70,6 +78,14 @@ class CardCharge(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    account = relationship("Account", backref=backref("card_charges", cascade="all, delete-orphan"))
-    statement = relationship("CardStatement", back_populates="charges")
+    account = relationship(
+        "Account",
+        back_populates="card_charges",
+        cascade="all, delete-orphan",
+    )
+    statement = relationship(
+        "CardStatement",
+        back_populates="charges",
+        cascade="all, delete-orphan",
+    )
     category = relationship("Category", backref="card_charges")

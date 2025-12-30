@@ -20,6 +20,16 @@ class Account(Base):
     due_day = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     user = relationship("User", backref="accounts")
+    card_statements = relationship(
+        "CardStatement",
+        back_populates="account",
+        cascade="all, delete-orphan",
+    )
+    card_charges = relationship(
+        "CardCharge",
+        back_populates="account",
+        cascade="all, delete-orphan",
+    )
