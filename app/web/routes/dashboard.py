@@ -115,14 +115,16 @@ async def get_or_create_statement(
 
 async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> Decimal:
     res = await db.execute(
-        select(func.coalesce(func.sum(CardCharge.amount), 0)).where(
+        select(func.coalesce(func.sum(CardCharge.amount), Decimal("0"))).where(
             CardCharge.statement_id == statement_id
         )
     )
     total = res.scalar()
+    if isinstance(total, Decimal):
+        return total
     if total is None:
         return Decimal("0")
-    return Decimal(total)
+    return Decimal(str(total))
 
 
 async def close_card_statements(db: AsyncSession, account: Account, today: date) -> None:
