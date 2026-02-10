@@ -44,7 +44,6 @@ class CardStatement(Base):
     account = relationship(
         "Account",
         back_populates="card_statements",
-        cascade="all, delete-orphan",
     )
     charges = relationship(
         "CardCharge",
@@ -81,11 +80,9 @@ class CardCharge(Base):
     account = relationship(
         "Account",
         back_populates="card_charges",
-        cascade="all, delete-orphan",
     )
     statement = relationship(
         "CardStatement",
         back_populates="charges",
-        cascade="all, delete-orphan",
     )
     category = relationship("Category", backref="card_charges")
