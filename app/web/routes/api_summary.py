@@ -80,7 +80,12 @@ async def get_financial_summary(
 
     # Use current account balances for the "Saldos por conta" section instead of month-scoped sums
     accounts_stmt = (
-        select(Account.id, Account.name, Account.balance.label("saldo"))
+        select(
+            Account.id,
+            Account.name,
+            Account.account_type,
+            Account.balance.label("saldo"),
+        )
         .where(Account.user_id == user.id)
         .order_by(Account.name)
     )
@@ -90,6 +95,7 @@ async def get_financial_summary(
         {
             "id": row.id,
             "name": row.name,
+            "account_type": row.account_type,
             "saldo": float(row.saldo or 0),
         }
         for row in accounts_result

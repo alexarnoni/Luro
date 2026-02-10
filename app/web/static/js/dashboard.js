@@ -564,6 +564,18 @@
         });
     }
 
+    function getAccountTypeMeta(accountType) {
+        const normalizedType = String(accountType || '').toLowerCase();
+        const accountTypes = {
+            checking: { label: 'Conta corrente', className: 'is-checking' },
+            savings: { label: 'Poupança', className: 'is-savings' },
+            credit: { label: 'Cartão de crédito', className: 'is-credit' },
+            investment: { label: 'Investimento', className: 'is-investment' },
+            other: { label: 'Outro', className: 'is-other' }
+        };
+        return accountTypes[normalizedType] ?? { label: 'Conta', className: 'is-other' };
+    }
+
     function renderContas(data) {
         if (!contasContainer) return;
         const contas = Array.isArray(data?.contas) ? data.contas : [];
@@ -589,6 +601,12 @@
             const title = document.createElement('h4');
             title.textContent = conta?.name ?? 'Conta';
             info.appendChild(title);
+
+            const typeMeta = getAccountTypeMeta(conta?.account_type);
+            const typeBadge = document.createElement('span');
+            typeBadge.className = `account-type-badge ${typeMeta.className}`;
+            typeBadge.textContent = typeMeta.label;
+            info.appendChild(typeBadge);
 
             const balance = document.createElement('span');
             balance.className = 'account-balance';
