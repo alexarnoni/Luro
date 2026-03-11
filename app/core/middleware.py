@@ -120,11 +120,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response.headers.setdefault("Content-Security-Policy", csp)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault(
             "Permissions-Policy",
-            "geolocation=(), microphone=(), camera=()",
+            "camera=(), microphone=(), geolocation=()",
         )
+        response.headers.setdefault("Cache-Control", "no-store")
 
         if settings.ENV.lower() == "production":
             response.headers.setdefault(
