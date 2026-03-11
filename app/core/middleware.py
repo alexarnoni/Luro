@@ -80,15 +80,33 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         nonce = getattr(request.state, "csp_nonce", None)
         nonce_directive = f" 'nonce-{nonce}'" if nonce else ""
 
+        # Build the connect-src directive.  Always include 'self', the CDN used for
+        # static assets, and Cloudflare endpoints required by the Turnstile widget and
+        # the optional Web Analytics beacon.  Operators can append extra origins (e.g.
+        # a Railway/Render API URL) via the CSP_CONNECT_SRC_EXTRA env variable.
+        cloudflare_connect = (
+            "https://challenges.cloudflare.com "
+            "https://static.cloudflareinsights.com"
+        )
+        extra_connect = " ".join(
+            o.strip().rstrip(",")
+            for o in settings.CSP_CONNECT_SRC_EXTRA.replace(",", " ").split()
+            if o.strip().rstrip(",")
+        )
+        connect_src = f"'self' https://cdn.jsdelivr.net {cloudflare_connect}"
+        if extra_connect:
+            connect_src += f" {extra_connect}"
+
         # Build a CSP that keeps strict defaults while allowing required third parties.
+        # In development, 'unsafe-eval' is permitted so that hot-reload tooling works.
         if settings.ENV.lower() == "development":
             csp = (
                 "default-src 'self'; "
-                f"script-src 'self'{nonce_directive} https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com; "
+                f"script-src 'self'{nonce_directive} 'unsafe-eval' https://cdn.jsdelivr.net https://challenges.cloudflare.com https://static.cloudflareinsights.com; "
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
                 "frame-src 'self' https://challenges.cloudflare.com; "
-                "connect-src 'self' https://cdn.jsdelivr.net;"
+                f"connect-src {connect_src};"
             )
         else:
             csp = (
@@ -97,16 +115,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "style-src 'self' 'unsafe-inline'; "
                 "img-src 'self' data:; "
                 "frame-src 'self' https://challenges.cloudflare.com; "
-                "connect-src 'self' https://cdn.jsdelivr.net;"
+                f"connect-src {connect_src};"
             )
 
         response.headers.setdefault("Content-Security-Policy", csp)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault(
             "Permissions-Policy",
-            "geolocation=(), microphone=(), camera=()",
+            "camera=(), microphone=(), geolocation=()",
         )
+        response.headers.setdefault("Cache-Control", "no-store")
 
         if settings.ENV.lower() == "production":
             response.headers.setdefault(
