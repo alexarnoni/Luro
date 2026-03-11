@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 15 * 60
     IMPORT_MAX_FILE_MB: int = 5
     ADMIN_EMAILS_RAW: str = Field(default="", alias="ADMIN_EMAILS")
+    # Extra origins (space- or comma-separated) allowed in connect-src CSP directive.
+    # Use this when the FastAPI backend is hosted on a different domain from the frontend,
+    # or when other external API origins need to be reachable via fetch/XHR (e.g. a Railway
+    # or Render deployment URL).  Example: "https://api.myapp.com https://other.example.com"
+    CSP_CONNECT_SRC_EXTRA: str = Field(default="")
 
     # Static assets cache busting
     ASSETS_VERSION: str = "4"
@@ -108,6 +113,23 @@ class Settings(BaseSettings):
     def parse_csrf_trusted_origins(cls, value: Any) -> list[str] | Any:
         """Support comma-separated CSRF_TRUSTED_ORIGINS from environment."""
         return _normalize_allowed_hosts(value)
+
+    @field_validator("CSP_CONNECT_SRC_EXTRA", mode="before")
+    @classmethod
+    def validate_csp_connect_src_extra(cls, value: Any) -> str:
+        """Ensure every origin in CSP_CONNECT_SRC_EXTRA uses https:// to prevent
+        weakening the Content-Security-Policy with plain-http or malformed origins."""
+        if not value:
+            return ""
+        raw = str(value)
+        origins = [o.strip().rstrip(",") for o in raw.replace(",", " ").split() if o.strip().rstrip(",")]
+        for origin in origins:
+            if not origin.startswith("https://"):
+                raise ValueError(
+                    f"CSP_CONNECT_SRC_EXTRA contains an invalid origin '{origin}'. "
+                    "Only https:// origins are permitted."
+                )
+        return raw
 
     @computed_field
     @property
