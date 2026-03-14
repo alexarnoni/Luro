@@ -47,10 +47,20 @@ def add_months(dt: datetime, months: int) -> datetime:
 
 
 def compute_close_date(purchase_dt: datetime, statement_day: int) -> date:
-    """Compute close date for a purchase; purchase on closing day goes to next cycle."""
+    """Compute the closing date of the statement a purchase belongs to.
+
+    Brazilian credit card convention:
+      - Purchases made BEFORE the closing day → current month's statement
+      - Purchases made ON or AFTER the closing day → next month's statement
+        (the current statement is already closed on that day)
+
+    Example with closing day = 20:
+      - Purchase on the 19th → statement closes on the 20th (this month) ✓
+      - Purchase on the 20th → statement closes on the 20th (next month) ✓
+      - Purchase on the 21st → statement closes on the 20th (next month) ✓
+    """
     if statement_day is None:
         raise HTTPException(status_code=400, detail="Defina o dia de fechamento do cartão antes de lançar compras")
-    # purchase exactly on closing day vai para próxima fatura
     if purchase_dt.day >= statement_day:
         target = add_months(purchase_dt.replace(day=statement_day), 1)
     else:
@@ -320,10 +330,33 @@ async def accounts_page(
         select(Account).where(Account.user_id == user.id)
     )
     accounts = accounts_result.scalars().all()
-    
+
+    # Compute outstanding balance (amount_due - amount_paid) for each credit account
+    credit_ids = [a.id for a in accounts if a.account_type == "credit"]
+    outstanding_by_account: dict[int, float] = {}
+    if credit_ids:
+        rows = await db.execute(
+            select(
+                CardStatement.account_id,
+                func.sum(CardStatement.amount_due - CardStatement.amount_paid),
+            )
+            .where(
+                CardStatement.account_id.in_(credit_ids),
+                CardStatement.status != "paid",
+            )
+            .group_by(CardStatement.account_id)
+        )
+        for account_id, total in rows.all():
+            outstanding_by_account[account_id] = float(total or 0)
+
     return templates.TemplateResponse(
         "accounts/list.html",
-        {"request": request, "user": user, "accounts": accounts}
+        {
+            "request": request,
+            "user": user,
+            "accounts": accounts,
+            "outstanding_by_account": outstanding_by_account,
+        }
     )
 
 

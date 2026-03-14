@@ -64,8 +64,14 @@
         {% for account in accounts %}
         <div class="account-card" data-account-row="{{ account.id }}">
             <h3 class="account-name">{{ account.name }}</h3>
-            <p class="account-type">{{ {'checking': _('Conta corrente'), 'savings': _('Poupança'), 'credit': _('Cartão de crédito'), 'investment': _('Investimento'), 'other': _('Outro')}.get(account.account_type, account.account_type|title) }}</p>
+            <span class="account-type-badge is-{{ account.account_type }}">{{ {'checking': _('Conta corrente'), 'savings': _('Poupança'), 'credit': _('Cartão de crédito'), 'investment': _('Investimento'), 'other': _('Outro')}.get(account.account_type, account.account_type|title) }}</span>
+            {% if account.account_type == 'credit' %}
+            <p class="account-balance" data-account-id="{{ account.id }}">
+                {{ _('Fatura em aberto:') }} R$ {{ "%.2f"|format(outstanding_by_account.get(account.id, 0)) }}
+            </p>
+            {% else %}
             <p class="account-balance" data-account-id="{{ account.id }}">R$ {{ "%.2f"|format(account.balance) }}</p>
+            {% endif %}
             {% if account.account_type == 'credit' %}
             <p class="account-meta">{{ _('Limite:') }} {{ account.credit_limit if account.credit_limit else _('Não informado') }} / {{ _('Fechamento:') }} {{ account.statement_day or '-' }} / {{ _('Vencimento:') }} {{ account.due_day or '-' }}</p>
             {% endif %}
