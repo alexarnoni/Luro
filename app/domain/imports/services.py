@@ -4,11 +4,14 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, select
@@ -633,6 +636,7 @@ async def _autofill_categories_with_llm(rows: List[ParsedTransaction], categorie
         try:
             choice = await suggest_category(row.description, category_names)
         except Exception:  # noqa: BLE001
+            logger.warning("LLM category suggestion failed for row %r", row.description, exc_info=True)
             continue
 
         matched = next((category for category in category_pool if category.name.lower() == choice.lower()), None)

@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, delete, func
 
+from app.core.audit import log_action
 from app.core.config import settings
 from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
@@ -390,11 +391,12 @@ async def create_account(
     )
     db.add(account)
     try:
+        await log_action(db, user_id=user.id, action="create", entity_type="account", detail={"name": name.strip(), "type": account_type.strip()})
         await db.commit()
     except Exception:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Unable to create account")
-    
+
     return RedirectResponse(url="/accounts", status_code=303)
 
 
@@ -637,6 +639,7 @@ async def create_transaction(
         else:  # expense
             account.balance = float(balance_decimal - amount_decimal)
         db.add(account)
+        await log_action(db, user_id=user.id, action="create", entity_type="transaction", detail={"amount": float(amount_decimal), "type": tx_type, "description": description})
         await db.commit()
     except HTTPException:
         raise
@@ -805,8 +808,9 @@ async def create_goal(
         target_date=target_dt
     )
     db.add(goal)
+    await log_action(db, user_id=user.id, action="create", entity_type="goal", detail={"name": name, "target": target_amount})
     await db.commit()
-    
+
     return RedirectResponse(url="/goals", status_code=303)
 
 
@@ -923,6 +927,7 @@ async def delete_account(
         await db.execute(delete(Transaction).where(Transaction.account_id == account_id))
         # delete the account
         await db.execute(delete(Account).where(Account.id == account_id))
+        await log_action(db, user_id=user.id, action="delete", entity_type="account", entity_id=account_id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -1001,6 +1006,7 @@ async def edit_transaction(
 
         db.add(account)
         db.add(transaction)
+        await log_action(db, user_id=user.id, action="update", entity_type="transaction", entity_id=txn_id, detail={"amount": new_amt, "type": new_type})
         await db.commit()
     except HTTPException:
         raise
@@ -1050,6 +1056,7 @@ async def delete_transaction(
         # delete the transaction
         await db.execute(delete(Transaction).where(Transaction.id == txn_id))
         db.add(account)
+        await log_action(db, user_id=user.id, action="delete", entity_type="transaction", entity_id=txn_id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -1093,6 +1100,7 @@ async def update_goal(
     goal.target_date = target_dt
 
     db.add(goal)
+    await log_action(db, user_id=user.id, action="update", entity_type="goal", entity_id=goal_id, detail={"name": name, "target": target_amount})
     await db.commit()
 
     return RedirectResponse(url="/goals", status_code=303)
