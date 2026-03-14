@@ -5,9 +5,10 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ _('Área Administrativa') }}</h1>
-    <p class="dashboard-subtitle">{{ _('Visão rápida de saúde, segurança e configuração.') }}</p>
+    <p class="dashboard-subtitle">{{ _('Saúde, segurança e configuração do sistema.') }}</p>
 </div>
 
+{# ── Saúde do sistema ─────────────────────────────────────────────── #}
 <section class="dashboard-section">
     <div class="section-heading">
         <h2>{{ _('Saúde do sistema') }}</h2>
@@ -17,44 +18,63 @@
             <h3>{{ _('Banco de dados') }}</h3>
             <p>
                 {% if db_ok %}
-                    <span class="status status-ok">✔ {{ _('Online') }}</span>
+                    <span style="color:var(--color-income,#22c55e)">✔ {{ _('Online') }}</span>
                 {% else %}
-                    <span class="status status-bad">✖ {{ _('Falha') }}</span>
+                    <span style="color:var(--color-expense,#ef4444)">✖ {{ _('Falha') }}</span>
                 {% endif %}
             </p>
-            <p>{{ _('Driver/URL') }}: <code>{{ db_url }}</code></p>
-            <p>{{ _('Tamanho') }}: {{ db_size if db_size else _('Indisponível') }}</p>
+            <p><code>{{ db_url }}</code></p>
+            {% if db_size %}
+            <p style="color:var(--text-muted,#6b7280);font-size:0.85rem;">{{ db_size }} bytes</p>
+            {% endif %}
+            <p style="color:var(--text-muted,#6b7280);font-size:0.85rem;">
+                {{ _('Servidor') }}: {{ server_time.strftime('%d/%m/%Y %H:%M') }} UTC
+            </p>
         </div>
         <div class="card">
             <h3>{{ _('Ambiente') }}</h3>
             <ul class="status-list">
                 <li>{{ _('ENV') }}: <strong>{{ app_env }}</strong></li>
                 <li>{{ _('App') }}: <strong>{{ app_name }}</strong></li>
-                <li>{{ _('Hosts permitidos') }}: <code>{{ allowed_hosts|join(", ") }}</code></li>
+                <li>{{ _('Hosts') }}: <code>{{ allowed_hosts|join(", ") }}</code></li>
             </ul>
         </div>
         <div class="card">
             <h3>{{ _('Variáveis críticas') }}</h3>
             <ul class="status-list">
                 {% for key, ok in env_status.items() %}
-                <li>{{ key }}: {% if ok %}<span class="status status-ok">{{ _('presente') }}</span>{% else %}<span class="status status-bad">{{ _('faltando/placeholder') }}</span>{% endif %}</li>
+                <li>
+                    {{ key }}:
+                    {% if ok %}
+                        <span style="color:var(--color-income,#22c55e)">✔ {{ _('presente') }}</span>
+                    {% else %}
+                        <span style="color:var(--color-expense,#ef4444)">✖ {{ _('faltando') }}</span>
+                    {% endif %}
+                </li>
                 {% endfor %}
             </ul>
         </div>
     </div>
 </section>
 
+{# ── Segurança / Login ────────────────────────────────────────────── #}
 <section class="dashboard-section">
     <div class="section-heading">
         <h2>{{ _('Segurança / Login') }}</h2>
     </div>
     <div class="cards-grid">
         <div class="card">
-            <h3>{{ _('Resumo por email (30 dias)') }}</h3>
+            <h3>{{ _('Por email (30 dias)') }}</h3>
             {% if login_email_summary %}
             <ul class="status-list">
                 {% for row in login_email_summary %}
-                <li><strong>{{ row.email }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen.strftime('%d/%m/%Y %H:%M:%S') if row.last_seen else '-' }}</li>
+                <li>
+                    <strong>{{ row.email }}</strong> —
+                    {{ row.count }}x
+                    <span style="color:var(--text-muted,#6b7280);font-size:0.8rem;">
+                        ({{ row.last_seen.strftime('%d/%m %H:%M') if row.last_seen else '-' }})
+                    </span>
+                </li>
                 {% endfor %}
             </ul>
             {% else %}
@@ -62,11 +82,17 @@
             {% endif %}
         </div>
         <div class="card">
-            <h3>{{ _('Resumo por IP (30 dias)') }}</h3>
+            <h3>{{ _('Por IP (30 dias)') }}</h3>
             {% if login_ip_summary %}
             <ul class="status-list">
                 {% for row in login_ip_summary %}
-                <li><strong>{{ row.ip }}</strong>: {{ row.count }} {{ _('pedidos') }} — {{ _('último') }} {{ row.last_seen.strftime('%d/%m/%Y %H:%M:%S') if row.last_seen else '-' }}</li>
+                <li>
+                    <strong>{{ row.ip }}</strong> —
+                    {{ row.count }}x
+                    <span style="color:var(--text-muted,#6b7280);font-size:0.8rem;">
+                        ({{ row.last_seen.strftime('%d/%m %H:%M') if row.last_seen else '-' }})
+                    </span>
+                </li>
                 {% endfor %}
             </ul>
             {% else %}
@@ -74,44 +100,9 @@
             {% endif %}
         </div>
     </div>
-    {% if login_events %}
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>{{ _('Quando') }}</th>
-                    <th>{{ _('Email') }}</th>
-                    <th>{{ _('IP') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for event in login_events %}
-                <tr>
-                    <td>{{ event.requested_at.strftime('%d/%m/%Y %H:%M:%S') if event.requested_at else '-' }}</td>
-                    <td>{{ event.email }}</td>
-                    <td>{{ event.ip or '-' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="empty-state">{{ _('Nenhum pedido de login encontrado.') }}</p>
-    {% endif %}
 </section>
 
-<section class="dashboard-section">
-    <div class="section-heading">
-        <h2>{{ _('Dados / Backup') }}</h2>
-    </div>
-    <p>{{ _('Use um snapshot do arquivo do banco (sqlite) ou backup via provedor se estiver em Postgres.') }}</p>
-    <ul class="status-list">
-        <li>{{ _('Driver/URL atual') }}: <code>{{ db_url }}</code></li>
-        <li>{{ _('Tamanho estimado') }}: {{ db_size if db_size else _('Indisponível') }}</li>
-        <li>{{ _('Horário do servidor (UTC)') }}: {{ server_time }}</li>
-    </ul>
-</section>
-
+{# ── Configuração de IA ───────────────────────────────────────────── #}
 <section class="dashboard-section">
     <div class="section-heading">
         <h2>{{ _('Configuração de IA') }}</h2>
@@ -120,69 +111,95 @@
         <div class="card">
             <h3>{{ _('Provider') }}</h3>
             <p><strong>{{ ai_config.provider }}</strong></p>
-            <p>{{ _('Limite mensal de insights') }}: {{ ai_config.insights_limit }}</p>
+            <p style="color:var(--text-muted,#6b7280);font-size:0.85rem;">
+                {{ _('Limite mensal de insights') }}: {{ ai_config.insights_limit }}
+            </p>
         </div>
         <div class="card">
             <h3>{{ _('Chaves') }}</h3>
             <ul class="status-list">
-                <li>Gemini: {% if ai_config.gemini_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
-                <li>OpenAI: {% if ai_config.openai_configured %}<span class="status status-ok">{{ _('configurada') }}</span>{% else %}<span class="status status-bad">{{ _('faltando') }}</span>{% endif %}</li>
+                <li>
+                    Gemini:
+                    {% if ai_config.gemini_configured %}
+                        <span style="color:var(--color-income,#22c55e)">✔ {{ _('configurada') }}</span>
+                    {% else %}
+                        <span style="color:var(--text-muted,#6b7280)">— {{ _('não configurada') }}</span>
+                    {% endif %}
+                </li>
+                <li>
+                    OpenAI:
+                    {% if ai_config.openai_configured %}
+                        <span style="color:var(--color-income,#22c55e)">✔ {{ _('configurada') }}</span>
+                    {% else %}
+                        <span style="color:var(--text-muted,#6b7280)">— {{ _('não configurada') }}</span>
+                    {% endif %}
+                </li>
             </ul>
-            <form method="post" action="/admin/ai-test" style="margin-top: 0.5rem;">
-                <button type="submit" class="btn btn-primary">{{ _('Testar provider') }}</button>
+            <form method="post" action="/admin/ai-test" style="margin-top:0.75rem;">
+                <button type="submit" class="btn btn-secondary">{{ _('Testar conectividade') }}</button>
             </form>
             {% if ai_test_result is defined and ai_test_result %}
+            <p style="margin-top:0.5rem;font-size:0.85rem;">
                 {% if ai_test_result.ok %}
-                <p class="status status-ok" style="margin-top: 0.5rem;">
-                    {{ _('Ok') }} ({{ ai_test_result.provider }}, {{ ai_test_result.latency_ms }}ms)
-                </p>
-                <p style="white-space: pre-wrap;">{{ ai_test_result.preview }}</p>
+                    <span style="color:var(--color-income,#22c55e)">✔ {{ ai_test_result.provider }} — {{ ai_test_result.latency_ms }}ms</span>
+                    <br><span style="color:var(--text-muted,#6b7280)">{{ ai_test_result.preview }}</span>
                 {% else %}
-                <p class="status status-bad" style="margin-top: 0.5rem;">
-                    {{ _('Falhou') }} ({{ ai_test_result.provider }}): {{ ai_test_result.detail }}
-                </p>
+                    <span style="color:var(--color-expense,#ef4444)">✖ {{ ai_test_result.provider }}: {{ ai_test_result.detail }}</span>
                 {% endif %}
+            </p>
             {% endif %}
         </div>
     </div>
 </section>
 
+{# ── Audit Log ────────────────────────────────────────────────────── #}
 <section class="dashboard-section">
     <div class="section-heading">
-        <h2>{{ _('Audit Log (últimas 50 ações)') }}</h2>
+        <h2>{{ _('Audit Log') }}</h2>
+        <span style="color:var(--text-muted,#6b7280);font-size:0.85rem;">{{ _('últimas 50 ações') }}</span>
     </div>
     {% if audit_logs %}
-    <table class="data-table" style="font-size:0.85rem;">
-        <thead>
-            <tr>
-                <th>{{ _('Data') }}</th>
-                <th>{{ _('Usuário') }}</th>
-                <th>{{ _('Ação') }}</th>
-                <th>{{ _('Entidade') }}</th>
-                <th>{{ _('ID') }}</th>
-                <th>{{ _('Detalhe') }}</th>
-                <th>IP</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in audit_logs %}
-            <tr>
-                <td>{{ entry.created_at }}</td>
-                <td>{{ entry.user_id }}</td>
-                <td><span class="badge badge-{{ 'success' if entry.action == 'create' else ('bad' if entry.action == 'delete' else 'info') }}">{{ entry.action }}</span></td>
-                <td>{{ entry.entity_type }}</td>
-                <td>{{ entry.entity_id or '-' }}</td>
-                <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ entry.detail or '' }}">{{ entry.detail or '-' }}</td>
-                <td>{{ entry.ip or '-' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="transactions-table" style="font-size:0.85rem;">
+            <thead>
+                <tr>
+                    <th>{{ _('Data') }}</th>
+                    <th>{{ _('Ação') }}</th>
+                    <th>{{ _('Entidade') }}</th>
+                    <th>{{ _('ID') }}</th>
+                    <th>{{ _('Detalhe') }}</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in audit_logs %}
+                <tr>
+                    <td style="white-space:nowrap;">{{ entry.created_at.strftime('%d/%m/%Y %H:%M') if entry.created_at else '-' }}</td>
+                    <td>
+                        {% if entry.action == 'create' %}
+                            <span class="badge badge-income">{{ entry.action }}</span>
+                        {% elif entry.action == 'delete' %}
+                            <span class="badge badge-expense">{{ entry.action }}</span>
+                        {% else %}
+                            <span class="badge">{{ entry.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.entity_type }}</td>
+                    <td>{{ entry.entity_id or '-' }}</td>
+                    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        title="{{ entry.detail or '' }}">{{ entry.detail or '-' }}</td>
+                    <td>{{ entry.ip or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p class="empty-state">{{ _('Nenhuma ação registrada ainda.') }}</p>
     {% endif %}
 </section>
 
+{# ── Logs recentes ────────────────────────────────────────────────── #}
 <section class="dashboard-section">
     <div class="section-heading">
         <h2>{{ _('Logs recentes') }}</h2>
