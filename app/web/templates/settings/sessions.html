@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Sessões ativas - Luro') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Sessões ativas') }}</h1>
+</div>
+
+<p class="text-muted">{{ _('Gerencie os dispositivos com acesso à sua conta. Revogar uma sessão desconecta o dispositivo imediatamente.') }}</p>
+
+{% if sessions %}
+<div class="form-card" style="margin-top: 1.5rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2 style="margin:0;">{{ _('Dispositivos conectados') }} ({{ sessions | length }})</h2>
+        <button type="button" class="btn btn-secondary btn-sm" id="revoke-all-btn">{{ _('Revogar todas as outras') }}</button>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ _('Dispositivo') }}</th>
+                <th>IP</th>
+                <th>{{ _('Criada em') }}</th>
+                <th>{{ _('Último acesso') }}</th>
+                <th>{{ _('Ação') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for session in sessions %}
+            <tr id="session-row-{{ session.id }}">
+                <td>
+                    {% if current_token and session.token == current_token %}
+                        <strong>{{ session.user_agent or _('Desconhecido') }}</strong>
+                        <span class="badge badge-success" style="margin-left:0.5rem;">{{ _('esta sessão') }}</span>
+                    {% else %}
+                        {{ session.user_agent or _('Desconhecido') }}
+                    {% endif %}
+                </td>
+                <td>{{ session.ip or '-' }}</td>
+                <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') if session.created_at else '-' }}</td>
+                <td>{{ session.last_seen_at.strftime('%d/%m/%Y %H:%M') if session.last_seen_at else '-' }}</td>
+                <td>
+                    {% if not (current_token and session.token == current_token) %}
+                    <button type="button" class="btn btn-danger btn-sm revoke-btn" data-session-id="{{ session.id }}">
+                        {{ _('Revogar') }}
+                    </button>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>{{ _('Nenhuma sessão ativa encontrada.') }}</p>
+</div>
+{% endif %}
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    async function revokeSession(sessionId) {
+        const resp = await fetch('/settings/sessions/' + sessionId + '/revoke', {
+            method: 'POST',
+            credentials: 'same-origin',
+        });
+        if (resp.ok) {
+            const row = document.getElementById('session-row-' + sessionId);
+            if (row) row.remove();
+            window.luroToast && window.luroToast.show('{{ _("Sessão revogada") }}', 'success');
+        } else {
+            window.luroToast && window.luroToast.show('{{ _("Erro ao revogar sessão") }}', 'error');
+        }
+    }
+
+    document.querySelectorAll('.revoke-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            revokeSession(this.dataset.sessionId);
+        });
+    });
+
+    const revokeAllBtn = document.getElementById('revoke-all-btn');
+    if (revokeAllBtn) {
+        revokeAllBtn.addEventListener('click', async function () {
+            const resp = await fetch('/settings/sessions/revoke-all', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                // Remove all rows except the current session
+                document.querySelectorAll('tr[id^="session-row-"]').forEach(function (row) {
+                    if (!row.querySelector('.badge-success')) row.remove();
+                });
+                window.luroToast && window.luroToast.show('{{ _("Outras sessões revogadas") }}', 'success');
+            } else {
+                window.luroToast && window.luroToast.show('{{ _("Erro ao revogar sessões") }}', 'error');
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

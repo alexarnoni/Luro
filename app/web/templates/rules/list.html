@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Regras de categorização - Luro') }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ _('Regras de categorização automática') }}</h1>
+    <button type="button" class="btn btn-primary" data-rule-toggle>+ {{ _('Nova regra') }}</button>
+</div>
+
+<p class="text-muted">{{ _('Regras são aplicadas automaticamente durante a importação de transações. A primeira regra que corresponder ao texto da transação será usada.') }}</p>
+
+<div id="rule-form" class="form-card" hidden>
+    <h2>{{ _('Adicionar nova regra') }}</h2>
+    <form method="post" action="/rules">
+        <div class="form-group">
+            <label for="match_text">{{ _('Texto a identificar') }}</label>
+            <input type="text" id="match_text" name="match_text" required class="form-control"
+                   placeholder="{{ _('ex.: UBER, SUPERMERCADO, Netflix') }}">
+            <small class="form-hint">{{ _('Qualquer transação cuja descrição contenha este texto será categorizada automaticamente.') }}</small>
+        </div>
+        <div class="form-group">
+            <label for="category_id">{{ _('Categoria') }}</label>
+            <select id="category_id" name="category_id" required class="form-control">
+                <option value="">{{ _('Selecione a categoria...') }}</option>
+                {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }} ({{ _(category.type) }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="priority">{{ _('Prioridade') }}</label>
+            <input type="number" id="priority" name="priority" value="0" class="form-control" min="0" max="100">
+            <small class="form-hint">{{ _('Regras com maior prioridade são verificadas primeiro.') }}</small>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ _('Salvar regra') }}</button>
+            <button type="button" data-rule-toggle class="btn btn-secondary">{{ _('Cancelar') }}</button>
+        </div>
+    </form>
+</div>
+
+{% if rules %}
+<div class="form-card" style="margin-top: 1.5rem;">
+    <table class="data-table" id="rules-table">
+        <thead>
+            <tr>
+                <th>{{ _('Texto') }}</th>
+                <th>{{ _('Categoria') }}</th>
+                <th>{{ _('Prioridade') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Ações') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+            <tr id="rule-row-{{ rule.id }}" class="{{ '' if rule.is_active else 'row-inactive' }}">
+                <td><code>{{ rule.match_text }}</code></td>
+                <td>{{ rule.category.name if rule.category else '-' }}</td>
+                <td>{{ rule.priority }}</td>
+                <td>
+                    <button type="button" class="btn btn-sm {{ 'btn-success' if rule.is_active else 'btn-secondary' }} toggle-btn"
+                            data-rule-id="{{ rule.id }}" data-active="{{ 'true' if rule.is_active else 'false' }}">
+                        {{ _('Ativa') if rule.is_active else _('Inativa') }}
+                    </button>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm delete-btn" data-rule-id="{{ rule.id }}">
+                        {{ _('Deletar') }}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state" style="margin-top: 2rem;">
+    <p>{{ _('Nenhuma regra criada ainda. Crie sua primeira regra para começar a categorizar transações automaticamente.') }}</p>
+</div>
+{% endif %}
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    // Toggle add-rule form
+    const toggleBtns = document.querySelectorAll('[data-rule-toggle]');
+    const ruleForm = document.getElementById('rule-form');
+    toggleBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!ruleForm) return;
+            if (ruleForm.hasAttribute('hidden')) {
+                ruleForm.removeAttribute('hidden');
+            } else {
+                ruleForm.setAttribute('hidden', 'true');
+            }
+        });
+    });
+
+    // Toggle active/inactive
+    document.querySelectorAll('.toggle-btn').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const ruleId = this.dataset.ruleId;
+            const resp = await fetch('/rules/' + ruleId + '/toggle', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const row = document.getElementById('rule-row-' + ruleId);
+                if (row) row.className = data.is_active ? '' : 'row-inactive';
+                this.dataset.active = data.is_active ? 'true' : 'false';
+                this.className = 'btn btn-sm ' + (data.is_active ? 'btn-success' : 'btn-secondary') + ' toggle-btn';
+                this.textContent = data.is_active ? '{{ _("Ativa") }}' : '{{ _("Inativa") }}';
+            } else {
+                window.luroToast && window.luroToast.show('{{ _("Erro ao atualizar regra") }}', 'error');
+            }
+        });
+    });
+
+    // Delete rule
+    document.querySelectorAll('.delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const ruleId = this.dataset.ruleId;
+            const resp = await fetch('/rules/' + ruleId + '/delete', {
+                method: 'POST',
+                credentials: 'same-origin',
+            });
+            if (resp.ok) {
+                const row = document.getElementById('rule-row-' + ruleId);
+                if (row) row.remove();
+                window.luroToast && window.luroToast.show('{{ _("Regra deletada") }}', 'success');
+            } else {
+                window.luroToast && window.luroToast.show('{{ _("Erro ao deletar regra") }}', 'error');
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

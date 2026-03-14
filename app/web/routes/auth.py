@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import uuid
 from datetime import datetime, timedelta
 
 import httpx
@@ -15,7 +16,7 @@ from app.core.cookies import SESSION_COOKIE_NAME, clear_session_cookie, set_sess
 from app.core.database import get_db
 from app.core.rate_limit import rate_limiter
 from app.core.security import magic_link_manager
-from app.domain.security.models import LoginRequest
+from app.domain.security.models import LoginRequest, UserSession
 from app.domain.users.models import User
 from app.core import i18n
 
@@ -34,6 +35,25 @@ templates.env.globals.setdefault(
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("app.security")
+
+
+def _get_client_ip(request: Request) -> str:
+    """Return the real client IP, handling reverse-proxy headers.
+
+    Checks ``X-Forwarded-For`` and ``X-Real-IP`` as fallbacks so that
+    rate limiting works correctly when the app sits behind Nginx or a
+    cloud load balancer. Only the first address in ``X-Forwarded-For`` is
+    used (the original client); intermediary proxies may append their own
+    addresses but cannot forge the leftmost entry in a well-configured proxy.
+    """
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # X-Forwarded-For: client, proxy1, proxy2 — take the leftmost
+        return forwarded_for.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
 
 
 async def _validate_turnstile(token: str | None, client_host: str) -> None:
@@ -144,7 +164,7 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """Send magic link to user's email."""
-    client_host = request.client.host if request.client else "unknown"
+    client_host = _get_client_ip(request)
     email_normalized = email.lower().strip()
     rate_key = f"{client_host}:{email_normalized}"
 
@@ -276,14 +296,26 @@ async def verify_magic_link(
         await db.commit()
         await db.refresh(user)
 
-    # Store user session (simplified - in production use proper session management)
+    # Create a revocable session record in the database
+    session_token = str(uuid.uuid4())
+    user_agent = request.headers.get("User-Agent", "")[:255]
+    client_ip = _get_client_ip(request)
+    db_session = UserSession(
+        user_id=user.id,
+        token=session_token,
+        ip=client_ip,
+        user_agent=user_agent,
+    )
+    db.add(db_session)
+    await db.commit()
+
     response = RedirectResponse(url="/dashboard", status_code=303)
-    set_session_cookie(response, email)
+    set_session_cookie(response, email, session_token)
 
     logger.info(
         "Magic link login successful [user=%s, client=%s]",
         anonymised_user,
-        request.client.host if request.client else "unknown",
+        client_ip,
     )
 
     return response

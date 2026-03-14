@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # Resend API
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "noreply@example.com"
-    FEEDBACK_TO_EMAIL: str = "alexandre.anf@gmail.com"
+    FEEDBACK_TO_EMAIL: str = ""
 
     # Captcha
     TURNSTILE_SITE_KEY: str = ""
@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_IP_WINDOW_SECONDS: int = 10 * 60
     LOGIN_RATE_LIMIT_EMAIL_MAX: int = 5
     LOGIN_RATE_LIMIT_EMAIL_WINDOW_SECONDS: int = 60 * 60
+
+    # Session
+    SESSION_COOKIE_MAX_AGE_SECONDS: int = 7 * 24 * 60 * 60  # 7 days
 
     # Security
     RATE_LIMIT_MAX: int = 5

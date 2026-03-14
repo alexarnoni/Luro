@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.rate_limit import rate_limiter
 from app.core.session import get_current_user
 from app.domain.imports.schemas import ImportApplyResponse, ImportMode, ImportPreviewResponse
-from app.domain.imports.services import process_import
+from app.domain.imports.services import MAX_FILE_BYTES, process_import
 from app.domain.users.models import User
 
 router = APIRouter()
@@ -56,7 +56,13 @@ async def import_transactions(
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File name is required")
 
-    file_bytes = await file.read()
+    # Read only up to the allowed limit + 1 byte to detect oversized files without loading everything into memory.
+    file_bytes = await file.read(MAX_FILE_BYTES + 1)
+    if len(file_bytes) > MAX_FILE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds maximum allowed size of {settings.IMPORT_MAX_FILE_MB} MB.",
+        )
 
     mapping_data: Optional[dict[str, str]] = None
     if mapping:
