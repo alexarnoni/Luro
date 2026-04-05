@@ -1,122 +1,106 @@
-# Luro – Personal Finance Manager
+# Luro – Personal Finance App
 
-Luro é um gerenciador financeiro pessoal com foco em segurança, autenticação sem senha e visualizações ricas construídas com FastAPI, Jinja e Chart.js. O projeto oferece dashboard interativo, gestão de contas, transações, metas e importação de extratos para agilizar o onboarding financeiro.
+Aplicativo de finanças pessoais construído como projeto de estudo arquitetural. Está em produção em [luro.alexarnoni.com](https://luro.alexarnoni.com), mas não está em desenvolvimento ativo.
 
-## Visão geral da arquitetura
+O foco do projeto foi construir uma base técnica sólida — segurança, infra, boas práticas — mais do que escalar um produto.
 
-- **Backend**: FastAPI (async) com SQLAlchemy e Alembic.
-- **Templates**: Jinja2 com componentes reutilizáveis.
-- **Frontend**: CSS modular versionado no repositório e scripts vanilla (sem bundler).
-- **Gráficos**: Chart.js via CDN UMD (`cdn.jsdelivr.net`).
-- **Autenticação**: Login por magic link usando Resend.
-- **Infra**: Docker/Docker Compose para desenvolvimento opcional.
+---
 
-## Pré-requisitos
+## Stack
 
-- Python 3.11+
-- SQLite (padrão) ou qualquer banco suportado pelo SQLAlchemy async
-- Node não é necessário (CSS já versionado)
+- **Backend:** FastAPI (async) + SQLAlchemy 2.0 + Alembic
+- **Frontend:** Jinja2 + Vanilla JS + Chart.js
+- **Banco:** PostgreSQL (produção) / SQLite (desenvolvimento)
+- **Auth:** Magic link via Resend
+- **Infra:** Docker Compose + Oracle Cloud VM + Cloudflare
+- **IA:** Gemini / OpenAI / Ollama (geração de insights mensais)
 
-## Variáveis de ambiente essenciais
+---
 
-Configure um arquivo `.env` na raiz com os valores abaixo (todos disponíveis em `app/core/config.py`):
+## Funcionalidades implementadas
+
+- Autenticação por magic link com sessões revogáveis individualmente
+- Proteção CSRF dupla (middleware + header `X-CSRF-Token`)
+- Rate limiting por IP e por e-mail com persistência em banco
+- Captcha via Cloudflare Turnstile
+- Content Security Policy dinâmica com nonce por request
+- Audit log de todas as mutações de dados
+- Cookies `HttpOnly`, `SameSite`, `Secure` com validação de ambiente
+- Dashboard com resumo mensal e gráficos por categoria
+- Importador CSV/OFX com deduplicação por hash, sugestão de categoria via LLM e sistema de regras
+- Gestão de cartão de crédito com parcelamento e controle de faturas
+- Metas financeiras com contribuição por conta
+- Insights mensais gerados por LLM com cache e rate limiting
+- i18n via GNU gettext (pt-BR / en)
+- Admin panel com audit log, health check e teste de conectividade do LLM
+- Backup automático via `pg_dump` agendável por cron
+
+---
+
+## Segurança
+
+Este foi o principal foco do projeto. Algumas decisões de design:
+
+- Magic link usa `URLSafeTimedSerializer` (itsdangerous) com expiração configurável
+- Sessions são armazenadas em banco e podem ser revogadas individualmente — não dependem só do cookie
+- O rate limiter de login usa tabela `login_requests` em banco, compatível com múltiplos workers (ao contrário do rate limiter in-memory de outros endpoints, que tem a limitação documentada no código)
+- CSP bloqueia scripts inline; nonce é gerado por request via middleware
+- `SECRET_KEY` fraca e SQLite em produção causam falha imediata na inicialização
+- Senhas de banco hardcoded no `docker-compose.prod.yml` são uma limitação conhecida (docker secrets seria o próximo passo)
+
+---
+
+## Rodando localmente
+
+```bash
+git clone https://github.com/alexarnoni/Luro.git
+cd Luro
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # ajuste as variáveis
+alembic upgrade head
+uvicorn main:app --reload --port 8000
+```
+
+Acesse `http://localhost:8000` para a UI ou `/docs` para a API.
+
+**Docker (opcional):**
+```bash
+docker compose up --build
+```
+
+---
+
+## Variáveis de ambiente
+
+Todas as variáveis disponíveis estão documentadas em `.env.example`.  
+As obrigatórias para rodar em produção:
 
 | Variável | Descrição |
-| --- | --- |
-| `DATABASE_URL` | URL de conexão do banco (padrão: `sqlite+aiosqlite:///./luro.db`). |
-| `RESEND_API_KEY` | Chave da API Resend para envio de magic links. |
-| `ENV` | `development` ou `production`; controla cookies e headers seguros. |
-| `ENABLE_CSRF_JSON` | Habilita validação de CSRF para requisições JSON mutáveis. |
-| `ENABLE_SECURITY_HARDENING` | Ativa captcha + rate limit persistente no login por magic link. |
-| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Chaves do Cloudflare Turnstile para o captcha da tela de login. |
-| `RATE_LIMIT_MAX` | Número máximo de requisições em janela para proteção de força bruta. |
-| `RATE_LIMIT_WINDOW_SECONDS` | Janela (em segundos) usada pelo rate limiter. |
-| `LOGIN_RATE_LIMIT_IP_MAX` / `LOGIN_RATE_LIMIT_IP_WINDOW_SECONDS` | Limite por IP para envio de magic link (usado quando o hardening está ativo). |
-| `LOGIN_RATE_LIMIT_EMAIL_MAX` / `LOGIN_RATE_LIMIT_EMAIL_WINDOW_SECONDS` | Limite por e-mail para envio de magic link (usado quando o hardening está ativo). |
-| `RESEND_FROM_EMAIL` | Remetente usado nos e-mails de autenticação. |
+|---|---|
+| `SECRET_KEY` | Chave de assinatura (mínimo 32 chars em produção) |
+| `DATABASE_URL` | PostgreSQL em produção (`postgresql+asyncpg://...`) |
+| `RESEND_API_KEY` | Envio de magic links |
+| `ALLOWED_HOSTS` | Hosts permitidos (ex: `luro.seudominio.com`) |
 
-Outras chaves relevantes: `SECRET_KEY`, `IMPORT_MAX_FILE_MB` e `DEBUG`.
+---
 
-## Executando localmente (runbook)
+## Limitações conhecidas
 
-1. **Clonar e preparar ambiente**
-   ```bash
-   git clone https://github.com/alexarnoni/Luro.git
-   cd Luro
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
-   cp .env.example .env  # ajuste conforme necessário
-   ```
+- Rate limiter de endpoints gerais (`/import`, etc.) é in-memory — não funciona corretamente com múltiplos workers
+- Strings de tradução em pt-BR incompletas (arquivos `.mo` não compilados no repositório)
+- Algumas funções duplicadas no código de dashboard (`_select_account_id` repetida)
 
-2. **Inicializar banco e executar migrations**
-   ```bash
-   alembic upgrade head
-   ```
+---
 
-3. **Iniciar a aplicação**
-   ```bash
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   Acesse `http://localhost:8000` para a UI ou `http://localhost:8000/docs` para a documentação OpenAPI.
+## Por que foi congelado
 
-4. **(Opcional) Docker Compose**
-   ```bash
-   docker-compose up --build
-   ```
+O projeto cumpriu o objetivo de aprender na prática como construir um produto web com segurança séria, autenticação sem senha, integração com LLMs e deploy em produção. A conclusão foi que o problema mais difícil em SaaS não é a engenharia — é distribuição e monetização.
 
-## Considerações de segurança
+O código fica público como referência de arquitetura e portfólio.
 
-- **Cookies de sessão**: enviados com `HttpOnly`, `SameSite=Lax` e `Secure` automático em produção.
-- **CSRF**: middleware `CSRFMiddleware` + `security.js` adicionam/verificam token em requisições JSON mutáveis quando `ENABLE_CSRF_JSON` está ativo.
-- **Rate limiting**: `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_SECONDS` protegem rotas sensíveis (login/import).
-- **Hardening de login**: quando `ENABLE_SECURITY_HARDENING=true`, o login exige validação Turnstile (`TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY`) e rate limit persistente (por IP/e-mail via tabela `login_requests`).
-- **CSP**: `SecurityHeadersMiddleware` aplica `Content-Security-Policy` que permite scripts apenas do próprio host e `cdn.jsdelivr.net` (Chart.js), evitando inline scripts.
-- **SQLite**: `journal_mode=WAL`, `foreign_keys=ON` e `busy_timeout` configurados automaticamente para resiliência.
+---
 
-## Importador de transações
+## Autor
 
-Endpoint `POST /api/import` suporta CSV/OFX até `IMPORT_MAX_FILE_MB` (padrão 5 MB) com dois modos:
-
-- `preview`: retorna colunas normalizadas, totais, duplicatas detectadas e sugestões de categoria.
-- `apply`: persiste transações válidas, ignora duplicatas já existentes e pode criar/atualizar regras (`save_rules=true`) para categorização automática futura.
-
-A deduplicação usa `source_hash`, regras existentes são aplicadas automaticamente e overrides podem forçar categorias específicas. Mapeamentos de colunas customizados são aceitos (`mapping`).
-
-## Migrations e boas práticas
-
-- Sempre execute `alembic revision --autogenerate -m "sua mensagem"` após alterar modelos.
-- Revise o diff gerado e ajuste tipos/nulos manualmente antes de aplicar.
-- Rode `alembic upgrade head` localmente e em ambientes de CI/CD.
-- Sincronize o modelo Python e a migration para evitar divergências.
-
-## Estilos e build de assets
-
-O CSS principal (`app/web/static/css/style.css`) é versionado diretamente. Não há pipeline de build; alterações devem ser feitas no arquivo e revisadas com atenção ao modo escuro (`html.dark`). Chart.js é carregado via CDN UMD e scripts customizados ficam em `app/web/static/js`.
-
-## Roadmap curto
-
-- Criar UI dedicada para gerenciamento de categorias.
-- Expor interface para importação (atualmente apenas API).
-- Cobertura de testes E2E para fluxos críticos (login, importação, dashboard).
-
-## Backups
-
-- Script manual: `bash scripts/backup_db.sh` (usa `docker exec luro-db-1 pg_dump` e salva em `/opt/luro_backups` por padrão).
-- Agendamento sugerido na VM: `0 3 * * * /bin/bash /opt/luro/scripts/backup_db.sh >> /var/log/luro_backup.log 2>&1`
-
-## Privacidade e Termos de Uso
-
-- Política de Privacidade: [`docs/PRIVACIDADE.md`](docs/PRIVACIDADE.md)
-- Termos de Uso: [`docs/TERMOS_DE_USO.md`](docs/TERMOS_DE_USO.md)
-- Links também disponíveis no rodapé da aplicação (`/privacidade` e `/termos`).
-
-## Checklist de testes manuais
-
-Antes de abrir PRs, execute manualmente:
-
-- [ ] Dashboard: carregamento do resumo mensal (`/dashboard` → cards, gráficos e skeletons).
-- [ ] Chart de categorias: validar exibição de dados e estado vazio com CTA.
-- [ ] Importador: requisitar `POST /api/import` em modo `preview` e `apply` com arquivos CSV/OFX pequenos.
-
-Marcar os itens no PR ajuda a garantir uma experiência consistente para novas contribuições.
+Alexandre Arnoni — [alexarnoni.com](https://alexarnoni.com) · [LinkedIn](https://linkedin.com/in/alexandrearnoni) · [GitHub](https://github.com/alexarnoni)
