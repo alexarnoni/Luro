@@ -149,15 +149,27 @@
         return monthLabelFormatter.format(date);
     }
 
-    function formatInsightMarkup(raw) {
-        if (!raw) return '';
-        // basic sanitization + markdown-lite for **bold** and line breaks
-        const escaped = raw
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        return withBold.replace(/\n/g, '<br>');
+    function buildInsightNodes(raw) {
+        // Renders markdown-lite (**bold** and line breaks) using DOM API — no innerHTML.
+        const fragment = document.createDocumentFragment();
+        if (!raw) return fragment;
+        const parts = raw.split(/\*\*(.+?)\*\*/g);
+        parts.forEach((part, i) => {
+            if (i % 2 === 1) {
+                // Odd indices are bold segments captured by the regex group
+                const strong = document.createElement('strong');
+                strong.textContent = part;
+                fragment.appendChild(strong);
+            } else {
+                // Plain text — split on newlines to insert <br> elements
+                const lines = part.split('\n');
+                lines.forEach((line, j) => {
+                    if (j > 0) fragment.appendChild(document.createElement('br'));
+                    if (line) fragment.appendChild(document.createTextNode(line));
+                });
+            }
+        });
+        return fragment;
     }
 
     function setInsightMessage(message, state = 'idle') {
@@ -165,7 +177,8 @@
             insightCard.dataset.state = state;
         }
         if (insightMessage) {
-            insightMessage.innerHTML = formatInsightMarkup(message);
+            insightMessage.textContent = '';
+            insightMessage.appendChild(buildInsightNodes(message));
         }
     }
 
@@ -564,6 +577,18 @@
         });
     }
 
+    function getAccountTypeMeta(accountType) {
+        const normalizedType = String(accountType || '').toLowerCase();
+        const accountTypes = {
+            checking: { label: 'Conta corrente', className: 'is-checking' },
+            savings: { label: 'Poupança', className: 'is-savings' },
+            credit: { label: 'Cartão de crédito', className: 'is-credit' },
+            investment: { label: 'Investimento', className: 'is-investment' },
+            other: { label: 'Outro', className: 'is-other' }
+        };
+        return accountTypes[normalizedType] ?? { label: 'Conta', className: 'is-other' };
+    }
+
     function renderContas(data) {
         if (!contasContainer) return;
         const contas = Array.isArray(data?.contas) ? data.contas : [];
@@ -589,6 +614,12 @@
             const title = document.createElement('h4');
             title.textContent = conta?.name ?? 'Conta';
             info.appendChild(title);
+
+            const typeMeta = getAccountTypeMeta(conta?.account_type);
+            const typeBadge = document.createElement('span');
+            typeBadge.className = `account-type-badge ${typeMeta.className}`;
+            typeBadge.textContent = typeMeta.label;
+            info.appendChild(typeBadge);
 
             const balance = document.createElement('span');
             balance.className = 'account-balance';

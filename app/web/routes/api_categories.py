@@ -9,6 +9,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import log_action
 from app.core.database import get_db
 from app.core.session import get_current_user
 from app.domain.accounts.models import Account
@@ -83,6 +84,7 @@ async def create_category(
         color=payload.color,
     )
     db.add(category)
+    await log_action(db, user_id=user.id, action="create", entity_type="category", detail={"name": payload.name, "type": payload.type})
 
     try:
         await db.commit()
@@ -131,6 +133,8 @@ async def update_category(
     for field, value in update_data.items():
         setattr(category, field, value)
 
+    await log_action(db, user_id=user.id, action="update", entity_type="category", entity_id=category_id, detail=update_data)
+
     try:
         await db.commit()
     except IntegrityError:
@@ -170,6 +174,7 @@ async def delete_category(
             detail="Category has linked transactions. Reassign them before deleting.",
         )
 
+    await log_action(db, user_id=user.id, action="delete", entity_type="category", entity_id=category_id, detail={"name": category.name})
     await db.delete(category)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

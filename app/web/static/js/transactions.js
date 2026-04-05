@@ -185,7 +185,7 @@
             const accountEls = document.querySelectorAll(`[data-account-row]`);
             accountEls.forEach((el) => {
               const balEl = el.querySelector('.account-balance');
-              if (balEl && balEl.dataset.accountId == json.account_id) {
+              if (balEl && balEl.dataset.accountId === String(json.account_id)) {
                 balEl.textContent = '$' + Number(json.account_balance).toFixed(2);
               }
             });

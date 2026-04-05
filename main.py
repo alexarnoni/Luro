@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, Request, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -6,16 +7,37 @@ from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
-from app.core.database import init_db
+from app.core.database import init_db, get_db
 from app.core.logging_config import setup_logging
 from app.core.middleware import CSRFMiddleware, RequestContextMiddleware, SecurityHeadersMiddleware
 from app.core.i18n import I18nMiddleware, gettext_proxy
 from app.core import i18n
 from app.core.cookies import SESSION_COOKIE_NAME
 from app.web.routes import api, auth, dashboard, pages, admin
-from app.web.routes import account, health
+from app.web.routes import account, health, settings, rules
+
+logger = logging.getLogger(__name__)
 
 setup_logging()
+
+
+async def _cleanup_old_login_requests() -> None:
+    """Delete LoginRequest records older than 90 days to prevent unbounded table growth."""
+    from datetime import timedelta
+    from sqlalchemy import delete
+    from app.domain.security.models import LoginRequest
+
+    cutoff = __import__("datetime").datetime.utcnow() - timedelta(days=90)
+    async for db in get_db():
+        try:
+            result = await db.execute(delete(LoginRequest).where(LoginRequest.requested_at < cutoff))
+            await db.commit()
+            deleted = result.rowcount
+            if deleted:
+                logger.info("Cleaned up %d old LoginRequest records (>90 days)", deleted)
+        except Exception:
+            logger.warning("LoginRequest cleanup failed", exc_info=True)
+        break
 
 
 @asynccontextmanager
@@ -23,6 +45,8 @@ async def lifespan(app: FastAPI):
     """Initialize app on startup."""
     # Initialize database
     await init_db()
+    # Remove stale login audit records to keep the table bounded
+    await _cleanup_old_login_requests()
     yield
 
 
@@ -66,6 +90,8 @@ app.include_router(admin.router, tags=["admin"])
 app.include_router(api.router, prefix="/api", tags=["api"])
 app.include_router(account.router, tags=["account"])
 app.include_router(health.router, tags=["health"])
+app.include_router(settings.router, tags=["settings"])
+app.include_router(rules.router, tags=["rules"])
 
 
 # Friendly handling for HTML 401/403 on web routes

@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, delete, func
 
+from app.core.audit import log_action
 from app.core.config import settings
 from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
@@ -113,14 +114,18 @@ async def get_or_create_statement(
     return stmt
 
 
-async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> float:
+async def _sum_statement_charges(db: AsyncSession, statement_id: int) -> Decimal:
     res = await db.execute(
-        select(func.coalesce(func.sum(CardCharge.amount), 0)).where(
+        select(func.coalesce(func.sum(CardCharge.amount), Decimal("0"))).where(
             CardCharge.statement_id == statement_id
         )
     )
     total = res.scalar()
-    return float(total or 0.0)
+    if isinstance(total, Decimal):
+        return total
+    if total is None:
+        return Decimal("0")
+    return Decimal(str(total))
 
 
 async def close_card_statements(db: AsyncSession, account: Account, today: date) -> None:
@@ -133,6 +138,8 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
     statements = result.scalars().all()
 
     for stmt in statements:
+        if stmt.carry_applied:
+            continue
         if stmt.status == "paid":
             continue
         if stmt.close_date > today:
@@ -141,8 +148,9 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
         # recompute totals
         stmt.amount_due = await _sum_statement_charges(db, stmt.id)
         # status
-        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
-        if outstanding <= 0:
+        amount_paid = Decimal(stmt.amount_paid or 0)
+        outstanding = stmt.amount_due - amount_paid
+        if outstanding <= Decimal("0"):
             stmt.status = "paid"
         else:
             stmt.status = "overdue" if today > stmt.due_date else "closed"
@@ -165,7 +173,6 @@ async def close_card_statements(db: AsyncSession, account: Account, today: date)
             )
             db.add(adj)
             stmt.carry_applied = True
-            stmt.amount_paid = stmt.amount_due  # mark as settled via carry-over
             stmt.status = "paid"
 
         db.add(stmt)
@@ -187,20 +194,23 @@ async def apply_card_payment(
         .order_by(CardStatement.close_date)
     )
     statements = res.scalars().all()
-    remaining = amount
+    remaining = Decimal(str(amount))
     last_touched = None
     for stmt in statements:
-        outstanding = stmt.amount_due - (stmt.amount_paid or 0.0)
+        if stmt.carry_applied:
+            continue
+        amount_paid = Decimal(stmt.amount_paid or 0)
+        outstanding = stmt.amount_due - amount_paid
         if outstanding <= 0:
             continue
         applied = min(remaining, outstanding)
-        stmt.amount_paid = (stmt.amount_paid or 0.0) + applied
+        stmt.amount_paid = amount_paid + applied
         remaining -= applied
         last_touched = stmt
 
         # recalc status
         outstanding_after = stmt.amount_due - stmt.amount_paid
-        if outstanding_after <= 0:
+        if outstanding_after <= Decimal("0"):
             stmt.status = "paid"
         else:
             stmt.status = "overdue" if payment_date.date() > stmt.due_date else "closed"
@@ -212,7 +222,7 @@ async def apply_card_payment(
     if remaining > 0 and statements:
         # nothing to pay, allow creating a negative adjustment in current cycle
         current_stmt = statements[-1]
-        current_stmt.amount_paid = (current_stmt.amount_paid or 0.0) + remaining
+        current_stmt.amount_paid = Decimal(current_stmt.amount_paid or 0) + remaining
         current_stmt.status = "paid" if current_stmt.amount_paid >= current_stmt.amount_due else current_stmt.status
         db.add(current_stmt)
         last_touched = current_stmt
@@ -381,11 +391,12 @@ async def create_account(
     )
     db.add(account)
     try:
+        await log_action(db, user_id=user.id, action="create", entity_type="account", detail={"name": name.strip(), "type": account_type.strip()})
         await db.commit()
     except Exception:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Unable to create account")
-    
+
     return RedirectResponse(url="/accounts", status_code=303)
 
 
@@ -628,6 +639,7 @@ async def create_transaction(
         else:  # expense
             account.balance = float(balance_decimal - amount_decimal)
         db.add(account)
+        await log_action(db, user_id=user.id, action="create", entity_type="transaction", detail={"amount": float(amount_decimal), "type": tx_type, "description": description})
         await db.commit()
     except HTTPException:
         raise
@@ -796,8 +808,9 @@ async def create_goal(
         target_date=target_dt
     )
     db.add(goal)
+    await log_action(db, user_id=user.id, action="create", entity_type="goal", detail={"name": name, "target": target_amount})
     await db.commit()
-    
+
     return RedirectResponse(url="/goals", status_code=303)
 
 
@@ -914,6 +927,7 @@ async def delete_account(
         await db.execute(delete(Transaction).where(Transaction.account_id == account_id))
         # delete the account
         await db.execute(delete(Account).where(Account.id == account_id))
+        await log_action(db, user_id=user.id, action="delete", entity_type="account", entity_id=account_id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -992,6 +1006,7 @@ async def edit_transaction(
 
         db.add(account)
         db.add(transaction)
+        await log_action(db, user_id=user.id, action="update", entity_type="transaction", entity_id=txn_id, detail={"amount": new_amt, "type": new_type})
         await db.commit()
     except HTTPException:
         raise
@@ -1041,6 +1056,7 @@ async def delete_transaction(
         # delete the transaction
         await db.execute(delete(Transaction).where(Transaction.id == txn_id))
         db.add(account)
+        await log_action(db, user_id=user.id, action="delete", entity_type="transaction", entity_id=txn_id)
         await db.commit()
     except Exception:
         await db.rollback()
@@ -1084,6 +1100,7 @@ async def update_goal(
     goal.target_date = target_dt
 
     db.add(goal)
+    await log_action(db, user_id=user.id, action="update", entity_type="goal", entity_id=goal_id, detail={"name": name, "target": target_amount})
     await db.commit()
 
     return RedirectResponse(url="/goals", status_code=303)

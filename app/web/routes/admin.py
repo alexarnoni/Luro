@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Request
@@ -13,13 +14,18 @@ from app.core.admin import require_admin
 from app.core.config import settings
 from app.core.cookies import SESSION_COOKIE_NAME
 from app.core.database import get_db
-from app.domain.security.models import LoginRequest
+from app.domain.security.models import AuditLog, LoginRequest
 from app.domain.users.models import User
 from app.services.llm_client import test_llm_connectivity
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _redact_db_url(url: str) -> str:
+    """Mask the password in a database URL to avoid credential exposure in the admin UI."""
+    return re.sub(r"(://[^:]+:)[^@]+(@)", r"\1***\2", url)
 templates = Jinja2Templates(directory="app/web/templates")
 templates.env.globals.setdefault("SESSION_COOKIE_NAME", SESSION_COOKIE_NAME)
 templates.env.globals.setdefault("ENABLE_CSRF_JSON", settings.ENABLE_CSRF_JSON)
@@ -149,11 +155,14 @@ async def _build_admin_context(
         "login_email_summary": login_email_summary,
         "login_ip_summary": login_ip_summary,
         "logs_tail": _tail_logs(),
+        "audit_logs": (await db.execute(
+            select(AuditLog).order_by(desc(AuditLog.created_at)).limit(50)
+        )).scalars().all(),
         "app_env": settings.ENV,
         "app_name": settings.APP_NAME,
         "allowed_hosts": settings.ALLOWED_HOSTS,
         "server_time": datetime.utcnow(),
-        "db_url": settings.DATABASE_URL,
+        "db_url": _redact_db_url(settings.DATABASE_URL),
         "ai_test_result": ai_test_result,
     }
     return context

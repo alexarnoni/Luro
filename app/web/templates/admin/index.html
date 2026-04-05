@@ -149,6 +149,42 @@
 
 <section class="dashboard-section">
     <div class="section-heading">
+        <h2>{{ _('Audit Log (últimas 50 ações)') }}</h2>
+    </div>
+    {% if audit_logs %}
+    <table class="data-table" style="font-size:0.85rem;">
+        <thead>
+            <tr>
+                <th>{{ _('Data') }}</th>
+                <th>{{ _('Usuário') }}</th>
+                <th>{{ _('Ação') }}</th>
+                <th>{{ _('Entidade') }}</th>
+                <th>{{ _('ID') }}</th>
+                <th>{{ _('Detalhe') }}</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in audit_logs %}
+            <tr>
+                <td>{{ entry.created_at }}</td>
+                <td>{{ entry.user_id }}</td>
+                <td><span class="badge badge-{{ 'success' if entry.action == 'create' else ('bad' if entry.action == 'delete' else 'info') }}">{{ entry.action }}</span></td>
+                <td>{{ entry.entity_type }}</td>
+                <td>{{ entry.entity_id or '-' }}</td>
+                <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ entry.detail or '' }}">{{ entry.detail or '-' }}</td>
+                <td>{{ entry.ip or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">{{ _('Nenhuma ação registrada ainda.') }}</p>
+    {% endif %}
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
         <h2>{{ _('Logs recentes') }}</h2>
     </div>
     {% if logs_tail %}
